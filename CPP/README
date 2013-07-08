@@ -1,0 +1,25 @@
+
+INFO-RNA uses the libRNA.a from the Vienna RNA Package. Thus before compiling
+INFO-RNA, you have to configure and install the Vienna RNA Package. You can
+download it at: 
+
+http://www.tbi.univie.ac.at/~ivo/RNA/
+
+Then modidy the Makefile of INFO-RNA such that the library path is set 
+correctly, e.g.:
+
+VIENNA          = /home/Vienna_1.6
+
+
+
+INFO-RNA 2.0 can handle sequence constraints, which can be given in IUPAC
+symbols using the -c option. Using an additional binary vector, you can allow
+some of the constraints to be violated.
+
+Furthermore, INFO-RNA 2.1 can be initialized with a random sequence fulfilling
+all constraints.
+
+INFO-RNA 2.1.1 adapts to the new g++ compiler.
+
+INFO-RNA 2.1.2 corrects a minor error occurring for hairpin loops of size >30bp.
+

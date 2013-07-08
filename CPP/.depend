@@ -1,0 +1,103 @@
+basics.o: basics.cpp basics.h energy.h constraints.h \
+ data/stacking_energies.dat data/interior_loop_1_1_energies.dat \
+ data/interior_loop_1_2_energies.dat data/interior_loop_2_2_energies.dat \
+ data/loop_destabilizing_energies.dat \
+ data/single_base_stacking_energies.dat \
+ data/terminal_mismatch_hairpin.dat data/terminal_mismatch_interior.dat \
+ hairpin_energy.h interior_energy.h stacking_energy.h bulge_energy.h \
+ multi_energy.h end_energy.h struct.h
+constraints.o: constraints.cpp constraints.h basics.h energy.h \
+ data/stacking_energies.dat data/interior_loop_1_1_energies.dat \
+ data/interior_loop_1_2_energies.dat data/interior_loop_2_2_energies.dat \
+ data/loop_destabilizing_energies.dat \
+ data/single_base_stacking_energies.dat \
+ data/terminal_mismatch_hairpin.dat data/terminal_mismatch_interior.dat \
+ hairpin_energy.h interior_energy.h stacking_energy.h bulge_energy.h \
+ multi_energy.h end_energy.h struct.h
+struct.o: struct.cpp struct.h basics.h energy.h constraints.h \
+ data/stacking_energies.dat data/interior_loop_1_1_energies.dat \
+ data/interior_loop_1_2_energies.dat data/interior_loop_2_2_energies.dat \
+ data/loop_destabilizing_energies.dat \
+ data/single_base_stacking_energies.dat \
+ data/terminal_mismatch_hairpin.dat data/terminal_mismatch_interior.dat \
+ hairpin_energy.h interior_energy.h stacking_energy.h bulge_energy.h \
+ multi_energy.h end_energy.h
+inverse.o: inverse.cpp inverse.h basics.h energy.h constraints.h \
+ data/stacking_energies.dat data/interior_loop_1_1_energies.dat \
+ data/interior_loop_1_2_energies.dat data/interior_loop_2_2_energies.dat \
+ data/loop_destabilizing_energies.dat \
+ data/single_base_stacking_energies.dat \
+ data/terminal_mismatch_hairpin.dat data/terminal_mismatch_interior.dat \
+ hairpin_energy.h interior_energy.h stacking_energy.h bulge_energy.h \
+ multi_energy.h end_energy.h struct.h
+energy.o: energy.cpp energy.h basics.h hairpin_energy.h constraints.h \
+ interior_energy.h stacking_energy.h bulge_energy.h multi_energy.h \
+ end_energy.h struct.h data/stacking_energies.dat \
+ data/interior_loop_1_1_energies.dat data/interior_loop_1_2_energies.dat \
+ data/interior_loop_2_2_energies.dat data/loop_destabilizing_energies.dat \
+ data/single_base_stacking_energies.dat \
+ data/terminal_mismatch_hairpin.dat data/terminal_mismatch_interior.dat
+hairpin_energy.o: hairpin_energy.cpp hairpin_energy.h basics.h energy.h \
+ constraints.h data/stacking_energies.dat \
+ data/interior_loop_1_1_energies.dat data/interior_loop_1_2_energies.dat \
+ data/interior_loop_2_2_energies.dat data/loop_destabilizing_energies.dat \
+ data/single_base_stacking_energies.dat \
+ data/terminal_mismatch_hairpin.dat data/terminal_mismatch_interior.dat \
+ interior_energy.h stacking_energy.h bulge_energy.h multi_energy.h \
+ end_energy.h struct.h
+interior_energy.o: interior_energy.cpp interior_energy.h basics.h \
+ energy.h constraints.h data/stacking_energies.dat \
+ data/interior_loop_1_1_energies.dat data/interior_loop_1_2_energies.dat \
+ data/interior_loop_2_2_energies.dat data/loop_destabilizing_energies.dat \
+ data/single_base_stacking_energies.dat \
+ data/terminal_mismatch_hairpin.dat data/terminal_mismatch_interior.dat \
+ hairpin_energy.h stacking_energy.h bulge_energy.h multi_energy.h \
+ end_energy.h struct.h
+bulge_energy.o: bulge_energy.cpp bulge_energy.h basics.h energy.h \
+ constraints.h data/stacking_energies.dat \
+ data/interior_loop_1_1_energies.dat data/interior_loop_1_2_energies.dat \
+ data/interior_loop_2_2_energies.dat data/loop_destabilizing_energies.dat \
+ data/single_base_stacking_energies.dat \
+ data/terminal_mismatch_hairpin.dat data/terminal_mismatch_interior.dat \
+ hairpin_energy.h interior_energy.h stacking_energy.h multi_energy.h \
+ end_energy.h struct.h
+stacking_energy.o: stacking_energy.cpp stacking_energy.h basics.h \
+ energy.h constraints.h data/stacking_energies.dat \
+ data/interior_loop_1_1_energies.dat data/interior_loop_1_2_energies.dat \
+ data/interior_loop_2_2_energies.dat data/loop_destabilizing_energies.dat \
+ data/single_base_stacking_energies.dat \
+ data/terminal_mismatch_hairpin.dat data/terminal_mismatch_interior.dat \
+ hairpin_energy.h interior_energy.h bulge_energy.h multi_energy.h \
+ end_energy.h struct.h
+multi_energy.o: multi_energy.cpp multi_energy.h basics.h energy.h \
+ constraints.h data/stacking_energies.dat \
+ data/interior_loop_1_1_energies.dat data/interior_loop_1_2_energies.dat \
+ data/interior_loop_2_2_energies.dat data/loop_destabilizing_energies.dat \
+ data/single_base_stacking_energies.dat \
+ data/terminal_mismatch_hairpin.dat data/terminal_mismatch_interior.dat \
+ hairpin_energy.h interior_energy.h stacking_energy.h bulge_energy.h \
+ end_energy.h struct.h
+end_energy.o: end_energy.cpp end_energy.h basics.h energy.h constraints.h \
+ data/stacking_energies.dat data/interior_loop_1_1_energies.dat \
+ data/interior_loop_1_2_energies.dat data/interior_loop_2_2_energies.dat \
+ data/loop_destabilizing_energies.dat \
+ data/single_base_stacking_energies.dat \
+ data/terminal_mismatch_hairpin.dat data/terminal_mismatch_interior.dat \
+ hairpin_energy.h interior_energy.h stacking_energy.h bulge_energy.h \
+ multi_energy.h struct.h
+search.o: search.cpp search.h basics.h energy.h constraints.h \
+ data/stacking_energies.dat data/interior_loop_1_1_energies.dat \
+ data/interior_loop_1_2_energies.dat data/interior_loop_2_2_energies.dat \
+ data/loop_destabilizing_energies.dat \
+ data/single_base_stacking_energies.dat \
+ data/terminal_mismatch_hairpin.dat data/terminal_mismatch_interior.dat \
+ hairpin_energy.h interior_energy.h stacking_energy.h bulge_energy.h \
+ multi_energy.h end_energy.h struct.h
+inv_folding_const.o: inv_folding_const.cpp basics.h energy.h \
+ constraints.h data/stacking_energies.dat \
+ data/interior_loop_1_1_energies.dat data/interior_loop_1_2_energies.dat \
+ data/interior_loop_2_2_energies.dat data/loop_destabilizing_energies.dat \
+ data/single_base_stacking_energies.dat \
+ data/terminal_mismatch_hairpin.dat data/terminal_mismatch_interior.dat \
+ hairpin_energy.h interior_energy.h stacking_energy.h bulge_energy.h \
+ multi_energy.h end_energy.h struct.h inverse.h search.h
