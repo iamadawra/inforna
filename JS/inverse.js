@@ -420,7 +420,7 @@ function Recursion(){
 
 	best_char_seq = new Array(struct_len+1);
 	for (var i=0; i<struct_len; i++){
-		best_char_seq[i] = int2char(best_int_seq[i]); //int2char ????????????
+		best_char_seq[i] = int2char(best_int_seq[i]);
 	}
 	best_char_seq[struct_len] = '\0'; // IS THIS LINE NECESSARY??? Array controller basically...
 	var min_result = MiniVec(D[numBP], 6); //MiniVec ????????????????????
