@@ -15,7 +15,7 @@ function BP2_2(var bp, var base_i, var base_j)
    else if (bp == 5) {base_i=3; base_j=2;}
    else
    {
-      throw("Wronf BasepairNr.!");
+      throw("Wrong BasepairNr.!");
       return false;
    }
 }
@@ -270,9 +270,28 @@ function Recursion(){
 				loop_size = BP_Order[bp_pos][1] - BP_Order[bp_pos][0]-1;
 				for (var bp_assign=0; bp_assign < 6; bp_assign++){
 					BP2_2(bp_assign, bp_i, bp_j);
-					D[bp_pos][bp_assign] = Sum_MaxDouble3()
+					D[bp_pos][bp_assign] = Sum_MaxDouble3(BestHairpinLoopEnergy(bp_pos,loop_size, bp_i, bp_j), Zero_or_StemEndAU(bp_pos, bp_assign), PairPenalty(bp_pos, bp_i, bp_j));
+
 				}
 			}
+			else{
+				if (BP_Order[bp_pos][1] < BP_Order[bp_pos-1][0]){
+					//VECTOR PUSH BACK FUNCTIONALITY
+					loop_size = BP_Order[bp_pos][1] - BP_Order[bp_pos][0]-1;
+					for (var bp_assign=0; bp_assign<6;bp_assign++){
+						BP2_2(bp_assign, bp_i, bp_j);
+						D[bp_pos][bp_assign] = Sum_MaxDouble3(BestHairpinLoopEnergy(bp_pos, loop_size, bp_i, bp_j), Zero_or_StemEndAU(bp_pos, bp_assign), PairPenalty(bp_pos, bp_i, bp_j));
+
+					}
+				}
+				else{
+					MLBestEnergy(bp_pos, stem_ends);
+				}
+			}
+			new_stem = false;
+		}
+		else{
+			// Milestone
 		}
 	}
 }
