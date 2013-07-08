@@ -312,7 +312,6 @@ function Recursion(){
 					for (var bp_assign=0; bp_assign<6;bp_assign++){
 						BP2_2(bp_assign, bp_i, bp_j);
 						D[bp_pos][bp_assign] = Sum_MaxDouble3(BestHairpinLoopEnergy(bp_pos, loop_size, bp_i, bp_j), Zero_or_StemEndAU(bp_pos, bp_assign), PairPenalty(bp_pos, bp_i, bp_j));
-
 					}
 				}
 				else{
@@ -427,3 +426,83 @@ function Recursion(){
 
 	return min_result[1];
 }
+
+
+/*********************************************************/
+/* Random initialization                                 */
+/*********************************************************/
+
+function Random_Init(){
+	var min_en;
+	var bp_i, bp_j;
+	var sum_constraints, rand_base, rand_pair;
+
+	best_char_seq = new Array(struct_len+1);
+	best_char_seq[struct_len] = '\0';
+
+	var bpTable;  // stores for each pos. the bound pos. in the BP (or -1 if unbound)
+	bpTable = make_BasePair_Table(brackets);
+
+	for (var i=0; i<struct_len; i++){
+		if (bpTable[i] == -1){
+	     
+	    	sum_constraints = SumVec(seq_constraints[i], 4);
+	    	
+	    	rand_base = RandomBase(sum_constraints) + 1;
+	     
+	    	var ones = 0;
+	    	var column = -1;
+	    	while (ones < rand_base){
+	    		column++;
+	        	if (seq_constraints[i][column] == 1)
+	        		ones++;
+	     	}
+	    	//column is the randomly chosen base assignment (0=A, 1=C, 2=G, 3=U)
+	    	best_char_seq[i] = int2char(column);         
+		}
+	    else if (bpTable[i] > i){
+	        var bp_constraints; //stores for all bp-assignments whether they are allowed or not
+	        bp_constraints = (int*) malloc(sizeof(int)*6);
+	        for (int bp=0; bp<6; bp++)
+	        	bp_constraints[bp] = 0;
+	        // finding allowed pairs
+	        if ((seq_constraints[i][0] == 1) && (seq_constraints[bpTable[i]][3] == 1))
+	        	bp_constraints[0] = 1;
+	        if ((seq_constraints[i][1] == 1) && (seq_constraints[bpTable[i]][2] == 1))
+	        	bp_constraints[1] = 1;
+	        if ((seq_constraints[i][2] == 1) && (seq_constraints[bpTable[i]][1] == 1))
+	        	bp_constraints[2] = 1;
+	        if ((seq_constraints[i][3] == 1) && (seq_constraints[bpTable[i]][0] == 1))
+	        	bp_constraints[3] = 1;
+	        if ((seq_constraints[i][2] == 1) && (seq_constraints[bpTable[i]][3] == 1))
+	        	bp_constraints[4] = 1;
+	        if ((seq_constraints[i][3] == 1) && (seq_constraints[bpTable[i]][2] == 1))
+	        	bp_constraints[5] = 1;
+	            
+	        sum_constraints = SumVec(bp_constraints, 6);
+	         
+	        rand_pair = RandomBasePair(sum_constraints) + 1;
+	         
+	        var ones = 0;
+	        var column = -1;
+	        while (ones < rand_pair){
+	        	column++;
+	            if (bp_constraints[column] == 1)
+	            	ones++;
+	        }
+	        //column is the randomly chosen base pair assignment (0=AU, 1=CG, 2=GC, 3=UA, 4=GU, 5=UG)
+	        BP2_2(column, bp_i, bp_j);
+	        best_char_seq[i] = int2char(bp_i);
+	        best_char_seq[bpTable[i]] = int2char(bp_j);
+	    }
+	}
+	   
+	var test_str, string;
+	test_str = new Array(struct_len+1);
+	string = new Array(struct_len+1);
+	strcpy(string, best_char_seq); //STRCOPY IN JS ???????
+	min_en = fold(string, test_str);
+	return min_en;
+}
+
+
