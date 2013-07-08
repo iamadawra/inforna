@@ -407,4 +407,23 @@ function Recursion(){
 			new_stem = true;
 		}
 	}
+
+	externBestEnergy();
+
+	best_int_seq = Traceback();
+
+	for (var i=0; i<struct_len; i++){
+		if (best_int_seq[i] == -1){
+			best_int_seq[i] = SetFreeBase(i);
+		}
+	}
+
+	best_char_seq = new Array(struct_len+1);
+	for (var i=0; i<struct_len; i++){
+		best_char_seq[i] = int2char(best_int_seq[i]); //int2char ????????????
+	}
+	best_char_seq[struct_len] = '\0'; // IS THIS LINE NECESSARY??? Array controller basically...
+	var min_result = MiniVec(D[numBP], 6); //MiniVec ????????????????????
+
+	return min_result[1];
 }
