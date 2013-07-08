@@ -20,6 +20,37 @@ function BP2_2(var bp, var base_i, var base_j)
    }
 }
 
+/**********************************************************
+ translates an integerBase to a characterBase (nucleotide)
+**********************************************************/
+function int2char(base) {
+	if(base == 0) return 'A';
+	if(base == 1) return 'C';
+	if(base == 2) return 'G';
+	if(base == 3) return 'U';
+	throw("There's something wrong in your int-base!");
+}
+
+
+/**********************************************************
+ translates the two bases (integer) of a BP to an integer
+ value for the pair (0,1,2,3,4,5)
+**********************************************************/
+function BP2int(b1, b2) {
+	var kind_of_BP = 0;
+	if(b1 == 0 && b2 == 3) kind_of_BP = 0;
+	else if (b1 == 1 && b2 == 2) kind_of_BP = 1;
+	else if (b1 == 2 && b2 == 1) kind_of_BP = 2;
+	else if (b1 == 3 && b2 == 0) kind_of_BP = 3;
+	else if (b1 == 2 && b2 == 3) kind_of_BP = 4;
+	else if (b1 == 3 && b2 == 2) kind_of_BP = 5;
+	else
+	{
+		throw("Wrong basepair (" + int2char(b1) + " - " + int2char(b2) + ") !");
+	}
+	return kind_of_BP;
+}
+
 /***********************************************************
  tests, whether one of three values is higher than MAX_DOUBLE,
  if so, the sum is set to MAX_DOUBLE as well
@@ -275,4 +306,50 @@ function Recursion(){
 			}
 		}
 	}
+}
+
+/**********************************************************
+ bulge_energy.cpp
+**********************************************************/
+
+
+function BulgeEnergy(size, bp_i, bp_j, bp_before) {
+	
+	var energy = 0.0;
+	var base_i_before, base_j_before;
+
+	BP2_2(bp_before, base_i_before, base_j_before);
+
+	/**********************************************************
+	 No bulges of size 0:
+	**********************************************************/
+	if(size == 0)
+	{
+		throw("No bulge!");
+	}
+
+	/**********************************************************
+	 Loop destabilizing energies
+	**********************************************************/
+	if(size <= 30)
+		energy += loop_destabilizing_energies[3*size-2]; // global array of...?
+	else
+	{
+		energy += loop_destabilizing_energies[3*30-2]; // global array of ... ?
+		energy += 1.75*RT*Math.log(size/30.0); // RT?
+	}
+
+	/**********************************************************
+	 Additional bulge-energy (size 1 : stacking, >1 : nothing but term, A-U penalty):
+	**********************************************************/
+	if (size == 1)
+		energy += stacking_energies[64*bp_i+16*base_i_before+4*bp_j+base_j_before];
+	else
+	{
+		if ((bp_before == 0) || (bp_before == 3) || (bp_before == 4 || bp_before == 5))
+			energy += terminalAU; // terminalAU?
+		if ((BP2int(bp_i, bp_j) == 0) || (BP2int(bp_i, bp_j) == 3) || (BP2int(bp_i, bp_j) == 4) || (BP2int(bp_i, bp_j) == 5))
+			energy += terminalAU; // terminalAU
+	}
+	return energy;
 }
