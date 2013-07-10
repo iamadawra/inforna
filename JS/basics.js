@@ -176,7 +176,7 @@ function SumVec(vec, size)
 
 function MiniVec(vec, size)
 {
-   var min = new Array(sizeof(double)*2); /// ???????????????
+   var min = new Array(2);
    min[0] = 1000000.0; //coord.
    min[1] = 1000000.0; //value
    for ( var i=0; i<size; i++)
@@ -195,7 +195,7 @@ function MiniVec(vec, size)
 
 function MaxiVec(vec, size)
 {
-   var max = new Array(sizeof(double)*2); /// ???????????????
+   var max = new Array(2);
    max[0] = -1000000; //coord.
    max[1] = -1000000; //value
    for (var i=0; i<size; i++)
@@ -217,7 +217,6 @@ function RandomBase(int number)
 {
    var zufall;
    zufall = Math.random();
-   zufall /= RAND_MAX;   /// ???????????????
 
    if (number == 4)
    {
@@ -258,7 +257,6 @@ function RandomBasePair()
 {
    var zufall;
    zufall = Math.random();
-   zufall /= RAND_MAX;   /// ???????????????
 
    if (zufall <= 0.1667)
       return 0;
@@ -283,7 +281,6 @@ function RandomBasePair(number)
 {
    var zufall;
    zufall = Math.random();
-   zufall /= RAND_MAX;   /// ???????????????
 
    if (number == 6)
    {
