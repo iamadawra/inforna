@@ -5,7 +5,7 @@ Dependencies Begin Here!
 /**********************************************************
  translates a BP (given as an integer) to two integerBases
 **********************************************************/
-function BP2_2(var bp, var base_i, var base_j)
+function BP2_2(bp, base_i, base_j)
 {
    if (bp == 0) {base_i=0; base_j=3;}
    else if (bp == 1) {base_i=1; base_j=2;}
@@ -232,7 +232,7 @@ function StemsInML(first_pos, BP_start_pos){
 /**********************************************************
  translates a BP (given as an integer) to two integerBases
 **********************************************************/
-function BP2_2(var bp, var base_i, var base_j)
+function BP2_2(bp, base_i, base_j)
 {
    if (bp == 0) {base_i=0; base_j=3;}
    else if (bp == 1) {base_i=1; base_j=2;}
@@ -252,7 +252,7 @@ function BP2_2(var bp, var base_i, var base_j)
  if so, the sum is set to MAX_DOUBLE as well
 ***********************************************************/
 
-function Sum_MaxDouble3(var sum1, var sum2, var sum3)
+function Sum_MaxDouble3(sum1, sum2, sum3)
 {
    if ((sum1 == Number.MAX_VALUE) || (sum2 == Number.MAX_VALUE) || (sum3 == Number.MAX_VALUE))
       return Number.MAX_VALUE;
