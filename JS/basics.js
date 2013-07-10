@@ -177,8 +177,8 @@ function SumVec(vec, size)
 function MiniVec(vec, size)
 {
    var min = new Array(sizeof(double)*2); /// ???????????????
-   min[0] = Number.MAX_VALUE; //coord.
-   min[1] = Number.MAX_VALUE; //value
+   min[0] = 1000000.0; //coord.
+   min[1] = 1000000.0; //value
    for ( var i=0; i<size; i++)
       if (vec[i] < min[1])
       {
@@ -196,8 +196,8 @@ function MiniVec(vec, size)
 function MaxiVec(vec, size)
 {
    var max = new Array(sizeof(double)*2); /// ???????????????
-   max[0] = Number.MIN_VALUE; //coord.
-   max[1] = Number.MIN_VALUE; //value
+   max[0] = -1000000; //coord.
+   max[1] = -1000000; //value
    for (var i=0; i<size; i++)
       if (vec[i] > max[1])
       {
