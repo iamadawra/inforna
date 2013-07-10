@@ -1,3 +1,8 @@
+//Needs Vector Functionality
+//STRCOPY IN JS
+//VECTOR LIBRARY DEPENDENCIES
+//What the hell is \0 doing in js??!
+
 /*--------------------------------------------------------------------------*/
 /************************************************
 checks, whether the user given structure is valid
@@ -164,15 +169,17 @@ function right_Element_Structure(structure)
    var            k;
    var            string, Shapiro, temp, tt[10];
 
+   MAX_LOOPS = 2000;
+
    var    loop_size[MAX_LOOPS];       /* contains loop sizes of a structure */
    var    helix_size[MAX_LOOPS];      /* contains helix sizes of a structure */
    var    loop_degree[MAX_LOOPS];     /* contains loop degrees of a structure */
    var    loops;                  /* n of loops and stacks in a structure */
    var    unpaired, pairs;        /* n of unpaired digits and pairs */
 
-   bulge = (short *) malloc(sizeof(short)*(strlen(structure)/3+1));
-   loop = (short *) malloc(sizeof(short)*(strlen(structure)/3+1));
-   temp = (char *) malloc(4*strlen(structure)+1);
+   bulge = new Array((structure.length)/3+1);
+   loop = new Array((structure.length)/3+1);
+   temp = new Array(4*(structure.length)+1);
 
    for (i = 0; i < MAX_LOOPS; i++)
       loop_size[i] = helix_size[i] = 0;
@@ -223,11 +230,8 @@ function right_Element_Structure(structure)
                        default: temp[l++] = 'M';                /* multiloop */
                     }
                     helix_size[loop[lp]]=p+1;
-
-                    sprintf(tt, "%d)" , loop_size[loop[lp]]);
                     for(k=0; k<strlen(tt); k++)
                        temp[l++] = tt[k];
-                    sprintf(tt, "S%d)" , helix_size[loop[lp]]);
                     for(k=0; k<strlen(tt); k++)
                        temp[l++] = tt[k];
 
@@ -239,9 +243,7 @@ function right_Element_Structure(structure)
       i++;
    }
 
-   *tt = '\0';
-   if (loop_size[0])
-      sprintf(tt, "E%d)" , loop_size[0]);
+   tt = '\0';
 
    for(k=0; k<strlen(tt); k++)
       temp[l++] = tt[k];
@@ -250,18 +252,14 @@ function right_Element_Structure(structure)
    if (loop_size[0])
       l++;
 
-   Shapiro = (char *) malloc(sizeof(char)*(l+1));
+   Shapiro = new Array(l+1);
    if (loop_size[0])
    {
       Shapiro[0]='(';
-      strcpy(Shapiro+1, temp);
+      strcpy(Shapiro+1, temp);   //STRCOPY???????????????
    }
    else
-      strcpy(Shapiro, temp);
-
-   free(string);
-   free(temp);
-   free(loop); free(bulge);
+      strcpy(Shapiro, temp);     //STRCOPY???????????????
 
    return Shapiro;
 }
@@ -280,14 +278,14 @@ closing bracket
 
 ***********************************************************/
 
-char* Element_Structure(char* right_structure)
+function Element_Structure(right_structure)
 {
-   int k;
-   char* newStruct;
+   var k;
+   var newStruct;     // VECTORS ????????????????????????????????????
    vector<char> tmp;              //helping vector, contains all closing brackets and its elements
    vector<char> newStructInverse; //the inverse of the new structure, since the structure is checked from tail to head
 
-   for (int i=strlen(right_structure)-1; i>=0; i--)
+   for (var i=strlen(right_structure)-1; i>=0; i--)
    {
       if (right_structure[i] != '(')
       {
@@ -300,15 +298,15 @@ char* Element_Structure(char* right_structure)
          while (tmp[tmp.size()-1-k] != ')')
             k++;
          // k is the number of entries of tmp that are written to newStructInv.
-         for (int j=k-1; j>=0; j--)
+         for (var j=k-1; j>=0; j--)
             newStructInverse.push_back(tmp[tmp.size()-1-j]);
          newStructInverse.push_back('(');
-         for (int j=0; j<=k; j++)
+         for (var j=0; j<=k; j++)
             tmp.pop_back();
       }
    }
 
-   newStruct = (char*) malloc(sizeof(char)*newStructInverse.size());
+   newStruct = new Array(newStructInverse.size());
    for (unsigned int i=0; i<newStructInverse.size(); i++)
       newStruct[i] = newStructInverse[newStructInverse.size()-i-1];
 
@@ -329,15 +327,15 @@ an equivalent position in BP_Order is needed and there,
 the number of free bases and stems is stored.
 ***********************************************************/
 
-int* ClosingStructure(int* bpTable)
+function ClosingStructure(bpTable)
 {
-   int* stems_and_freeBases;
-   stems_and_freeBases = (int*) malloc(sizeof(int)*2);
-   int stems = 0;
-   int freeB = 0;
-   int i = 0;
+   var stems_and_freeBases;
+   stems_and_freeBases = new Array(2);
+   var stems = 0;
+   var freeB = 0;
+   var i = 0;
 
-   while (i < (int)strlen(brackets))
+   while (i < (brackets.length))
    {
       if (brackets[i] == '.')
       {
