@@ -428,6 +428,45 @@ function Recursion(){
 }
 
 
+/****************************************************************************
+*****************************************************************************
+
+ Doing the traceback:
+
+ *****************************************************************************
+ ****************************************************************************/
+
+
+function Traceback(){
+	var seq_len = brackets.length;
+	var int_seq;
+	int_seq = new Array(seq_len);
+	for (var i=0; i<seq_len; i++){
+		int_seq[i] = -1;
+	}
+	var int_result;
+	min_result = MiniVec(D[numBP], 6); //MINIVEC ?????????
+	var bp_assign, bp_assign_i, bp_assign_j, min_i=0, min_j=0, min_i2=0, min_j2=0, min1=0, min2=0, min3=0, min4=0;
+	var bp_i, bp_j;
+	var hairpin loop;
+	var valid_hairpin_loop;
+	var left_loop_size, right_loop_size, hairpin_loop_size;
+	var energy, min=0;
+
+	var pair_size, base_size;
+	var i;
+	//Vector declarations 
+
+
+	//Milestone July 9 - 8.15pm
+}
+
+
+
+
+
+
+
 /*********************************************************/
 /* Random initialization                                 */
 /*********************************************************/
@@ -438,7 +477,7 @@ function Random_Init(){
 	var sum_constraints, rand_base, rand_pair;
 
 	best_char_seq = new Array(struct_len+1);
-	best_char_seq[struct_len] = '\0';
+	best_char_seq[struct_len] = '\0';  // AGAIN. This \0 is annoying ..
 
 	var bpTable;  // stores for each pos. the bound pos. in the BP (or -1 if unbound)
 	bpTable = make_BasePair_Table(brackets);
