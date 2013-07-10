@@ -65,7 +65,7 @@ function getSeqConstraints()
    seq_constraints = new Array((iupac_const).length);
    for (var i=0; i<(iupac_const.length); i++)
    {
-      seq_constraints[i] = (int*) malloc(sizeof(int)*4);  ///SIZEOF IN JS?!?!?!
+      seq_constraints[i] = new Array(4);
       for (var j=0; j<4; j++)
          seq_constraints[i][j] = Compare_IUPAC_Base(iupac_const[i], j);
    }  
@@ -76,10 +76,10 @@ function getSeqConstraints()
  if so, the sum is set to MIN_INT
 ***********************************************************/
 
-double Sum_MinInt(double sum1, double sum2)
+function Sum_MinInt(sum1, sum2)
 {
-   if (((int)sum1 == MIN_INT) || ((int)sum2 == MIN_INT))
-      return MIN_INT;
+   if ((sum1 == -1000000) || ((int)sum2 == -1000000))
+      return -1000000;
    else
       return sum1+sum2;
 }
@@ -90,10 +90,10 @@ double Sum_MinInt(double sum1, double sum2)
  if so, the sum is set to MAX_DOUBLE as well
 ***********************************************************/
 
-double Sum_MaxDouble(double sum1, double sum2)
+function Sum_MaxDouble(sum1, sum2)
 {
-   if ((sum1 == MAX_DOUBLE) || (sum2 == MAX_DOUBLE))
-      return MAX_DOUBLE;
+   if ((sum1 == 1000000.0) || (sum2 == 1000000.0))
+      return 1000000.0;
    else
       return sum1+sum2;
 }
@@ -104,10 +104,10 @@ double Sum_MaxDouble(double sum1, double sum2)
  if so, the sum is set to MAX_DOUBLE as well
 ***********************************************************/
 
-double Sum_MaxDouble3(double sum1, double sum2, double sum3)
+function Sum_MaxDouble3(sum1, sum2, sum3)
 {
-   if ((sum1 == MAX_DOUBLE) || (sum2 == MAX_DOUBLE) || (sum3 == MAX_DOUBLE))
-      return MAX_DOUBLE;
+   if ((sum1 == 1000000.0) || (sum2 == 1000000.0) || (sum3 == 1000000.0))
+      return 1000000.0;
    else
       return sum1+sum2+sum3;
 }
@@ -118,10 +118,10 @@ double Sum_MaxDouble3(double sum1, double sum2, double sum3)
  if so, the sum is set to MAX_DOUBLE as well
 ***********************************************************/
 
-double Sum_MaxDouble4(double sum1, double sum2, double sum3, double sum4)
+function Sum_MaxDouble4(sum1, sum2, sum3, sum4)
 {
-   if ((sum1 == MAX_DOUBLE) || (sum2 == MAX_DOUBLE) || (sum3 == MAX_DOUBLE) || (sum4==MAX_DOUBLE))
-      return MAX_DOUBLE;
+   if ((sum1 == 1000000.0) || (sum2 == 1000000.0) || (sum3 == 1000000.0) || (sum4==1000000.0))
+      return 1000000.0;
    else
       return sum1+sum2+sum3+sum4;
 }
@@ -134,10 +134,10 @@ double Sum_MaxDouble4(double sum1, double sum2, double sum3, double sum4)
  is penalized, this should be seen in Ediff as well)
 ***********************************************************/
 
-double Sub_MinInt(double sum, double sub)
+function Sub_MinInt(sum, sub)
 {
-   if ((sum == MAX_DOUBLE) || (sub == MAX_DOUBLE))
-      return MIN_INT;
+   if ((sum == 1000000.0) || (sub == 1000000.0))
+      return -1000000;
    else
       return sum-sub;
 }
@@ -148,7 +148,7 @@ double Sub_MinInt(double sum, double sub)
  (if necessary, the penalty is given)
 ***********************************************************/
 
-double BasePenalty(int pos, int base_assign)
+function BasePenalty(pos, base_assign)
 {
    if (step == 1)
    {
@@ -164,7 +164,7 @@ double BasePenalty(int pos, int base_assign)
       else if ((seq_constraints[pos][base_assign] == 0) && (mis_vec[pos] == 1))
          return 0;
       else
-         return MAX_DOUBLE;
+         return 1000000.0;
    }
 }
 
@@ -173,14 +173,14 @@ double BasePenalty(int pos, int base_assign)
  identifies the penalty for a base pair
 ************************************************************/
 
-double PairPenalty(int bp_pos, int bp_i, int bp_j)
+function PairPenalty(bp_pos, bp_i, bp_j)
 {
    int pos_i = BP_Order[bp_pos][0];
    int pos_j = BP_Order[bp_pos][1];
    return Sum_MaxDouble(BasePenalty(pos_i, bp_i),BasePenalty(pos_j, bp_j));
 }
 
-double PairPenalty(int pos_i, int pos_j, int bp_i, int bp_j)
+function PairPenalty(pos_i, pos_j, bp_i, bp_j)
 {
    return Sum_MaxDouble(BasePenalty(pos_i, bp_i),BasePenalty(pos_j, bp_j));
 }
@@ -190,7 +190,7 @@ double PairPenalty(int pos_i, int pos_j, int bp_i, int bp_j)
  (= gives the number of valid bases)
 *************************************************************/
 
-int Sum_SeqConst(int pos_row)
+function Sum_SeqConst(pos_row)
 {
    return seq_constraints[pos_row][0]+seq_constraints[pos_row][1]+seq_constraints[pos_row][2]+seq_constraints[pos_row][3];
 }
@@ -202,14 +202,14 @@ int Sum_SeqConst(int pos_row)
  (minds the constraints and free_bases_set2X)
 *************************************************************/
 
-int SetFreeBase(int pos)
+function SetFreeBase(pos)
 {
    // if all free bases that give no energy-part are choosen to be set to a fixed base, we have to test the constraints at this positions 
    // nevertheless. If the fixed base is forbidden by the constraints, a base is chosen ramdomly among the other bases
 
    // generate a vector that gives the base assignments that are allowed (concerning free_bases_set2X and seq_constraints)
-   int* free_bases_set2;
-   free_bases_set2 = (int*) malloc(sizeof(int)*4);
+   var free_bases_set2;
+   free_bases_set2 = new Array(4);
    free_bases_set2[0] = Minimum(free_bases_set2A,seq_constraints[pos][0]);
    free_bases_set2[1] = Minimum(free_bases_set2C,seq_constraints[pos][1]);
    free_bases_set2[2] = Minimum(free_bases_set2G,seq_constraints[pos][2]);
@@ -217,13 +217,13 @@ int SetFreeBase(int pos)
 
    // If all bases fixed by free_bases_set2X are forbidden by seq_constraints, or if no fixed forces are given (free_bases_set2X = 0 for all X), 
    // this vector consists only of zeros and the "else" is done
-   int sum_constraints = SumVec(free_bases_set2,4);
+   var sum_constraints = SumVec(free_bases_set2,4);
 
    if (sum_constraints > 0)
    {
-      int rand_free = RandomBase(sum_constraints) + 1;
-      int ones = 0;
-      int column = -1;
+      var rand_free = RandomBase(sum_constraints) + 1;
+      var ones = 0;
+      var column = -1;
       while (ones < rand_free)
       {
          column++;
@@ -235,15 +235,14 @@ int SetFreeBase(int pos)
    }
    else // if no forces because of free_bases_set2X or if all bases fixed by free_bases_set2X are forbidden by seq_constraints
    {
-      int sum = Sum_SeqConst(pos); //number of valid assignments
+      var sum = Sum_SeqConst(pos); //number of valid assignments
       if (sum == 0)
       {
-         cerr << "No valid base at position " << pos << "!\n";
-         exit(1);
+         throw("No valid base at position " + pos + "!\n");
       }
-      int rand = RandomBase(sum) + 1;  // the rand-th valid base assignment is chosen
-      int ones = 0;
-      int column = -1;
+      var rand = RandomBase(sum) + 1;  // the rand-th valid base assignment is chosen
+      var ones = 0;
+      var column = -1;
       while (ones < rand)
       {
          column++;
