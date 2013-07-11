@@ -538,7 +538,514 @@ function Traceback(){
 		BasePairConnections.clear();
 	}
 
-	//Line 581 corresponding
+	for (var bp_pos=numBP-1; bp_pos>-1; bp_pos--){
+	/*Traceback is done stepwise, base pair per base pair. Usually, the previous BP in BP_Order
+	is the predecessor of the current one, except for MLs! MLs have more than one predecessors.
+	This doesn't matter, the BPs are processed in the order of BP_Order, nevertheless. 
+	
+	all assignments of base pairs that are already fixed by the traceback, are written in int_seq,
+	i.e. concerning MLs: the closingBP and the last BPs of the stems. If the traceback (running
+	through BP_Order) reaches these BPs, they are already fixed in int_seq. For go on in the traceback,
+	choose the fixed assignment (given in int_seq) and find the right assignment of the
+	predecessor(s) with the help of Trace.*/
+
+	/*************************************************************************/
+
+	bp_assign = BP2int(int_seq[BP_Order[bp_pos][0]],int_seq[BP_Order[bp_pos][1]]);
+	hairpin_loop = false;
+
+	var bp_pos_i = BP_Order[bp_pos][0];
+	var bp_pos_j = BP_Order[bp_pos][1];
+
+	//finding the assignments of the predecessors and store in int_seq
+	for (var vg=0; vg<Maximum(BP_Order[bp_pos][3],1); vg++)
+	{
+ 		if (Trace[bp_pos][bp_assign][vg][1] != -1) //i.e. it has a predecessor (no closing BP of a HL)
+ 		{
+    		BP2_2(Trace[bp_pos][bp_assign][vg][1], bp_i, bp_j);
+    		int_seq[BP_Order[Trace[bp_pos][bp_assign][vg][0]][0]] = bp_i;
+    		int_seq[BP_Order[Trace[bp_pos][bp_assign][vg][0]][1]] = bp_j;
+ 		}
+ 		else //a HL follows
+ 		{
+    		hairpin_loop = true;
+    		break;
+ 		}
+	}
+
+    valid_hairpin_loop = false;
+    BP2_2(bp_assign,bp_assign_i,bp_assign_j);
+
+    //*****************************************************************************
+    //*****************************************************************************
+    //assign HAIRPINLOOP
+    //*************************
+    if (hairpin_loop)
+    {
+ 		//find loop size:
+ 		hairpin_loop_size = BP_Order[bp_pos][1] - BP_Order[bp_pos][0] - 1;
+ 		if (hairpin_loop_size == 3)
+ 		{
+    		// in case of a triloop, the energy only depends on the size (=3), exceptions: CCC => +1.4; GGG => -2.2
+    		// thus firstly, triloop are assigned randomly, maybe considering all possibilities later
+    		while (valid_hairpin_loop == false)
+    		{
+       			//finding an assignment
+       			for (var pos=1; pos<=3; pos++)
+          			int_seq[bp_pos_i+pos] = SetFreeBase(bp_pos_i+pos);
+
+       			//test, whether the assignment gives the energy that is stored in D (done for making the CCC-loop valid)
+       			//penalties for AU-closingBP and GU-closingBP and CCC-Loop, negative penalty for GGG-Loop (GGG missed out, since also done in Vienna Package)
+       			energy = loop_destabilizing_energies[3*hairpin_loop_size-1];
+
+       			// not energy fragment for the closing BP, but penalties for it and the bases in the loop
+       			energy_help = Sum_MaxDouble4(BasePenalty(bp_pos_i+1,int_seq[bp_pos_i+1]), BasePenalty(bp_pos_i+2,int_seq[bp_pos_i+2]), BasePenalty(bp_pos_i+3,int_seq[bp_pos_i+3]), PairPenalty(bp_pos, bp_assign_i, bp_assign_j));
+
+       			energy = Sum_MaxDouble(energy_help,energy);
+
+       			if ((bp_assign == 0) || (bp_assign == 3) || (bp_assign == 4) || (bp_assign == 5))
+          			energy = Sum_MaxDouble(energy,terminalAU);
+
+       			if ((int_seq[bp_pos_i+1] == 1) && (int_seq[bp_pos_i+2] == 1) && (int_seq[bp_pos_i+3] == 1))
+          			energy = Sum_MaxDouble(energy,Ctriloop);
+       			//else if ((int_seq[BP_Order[bp_pos][0]+1] == 2) && (int_seq[BP_Order[bp_pos][0]+2] == 2) && (int_seq[BP_Order[bp_pos][0]+3] == 2))
+       			//   energy = Sum_MaxDouble(energy,Gtriloop);
+
+       			//terminal mismatch energy, if the HLclosing BP is the last one in a stem
+       			if ((StackEnd(bp_pos)) && ((bp_assign == 0) || (bp_assign == 3) || (bp_assign == 4) || (bp_assign == 5)))
+          			energy = Sum_MaxDouble(energy,terminalAU);
+
+       			//test, whether HL is valid
+       			if (D[bp_pos][bp_assign] == energy)
+          			valid_hairpin_loop = true;
+       			// dealing with GGG triloops, missed out, since also done in Vienna Package
+		        /*else if (Sum_MaxDouble(D[bp_pos][bp_assign], Gtriloop) == energy)
+		        {
+		           int_seq[BP_Order[bp_pos][0]+1] = 2;
+		           int_seq[BP_Order[bp_pos][0]+2] = 2;
+		           int_seq[BP_Order[bp_pos][0]+3] = 2;
+		           valid_hairpin_loop = true;
+		        }*/
+    		}
+ 		}
+ 		else if (hairpin_loop_size == 4)
+ 		{
+		    //allocate memory and assign BP
+		    var tetra_plus_closing;
+		    tetra_plus_closing = new Array(6);
+		    tetra_plus_closing[0] = int2char(bp_assign_i);
+		    tetra_plus_closing[5] = int2char(bp_assign_j);
+
+		    energy = loop_destabilizing_energies[3*hairpin_loop_size-1];
+
+		    // consider all cases of the tetraloop (4*4*4*4) and add term-mismatch and
+		    // possibly a bonus, furthermore add the penalties for all 4 bases
+		    // (even if there could be some equally good loop assignments, choose one randomly)
+		    //      i2   j2
+		    //   i           j
+		    //     bp_i-bp_j
+		    //       .   .
+
+		    min = MAX_DOUBLE;
+		    for (var i=0; i<4; i++)
+		       for (var j=0; j<4; j++)
+		          for (var i2=0; i2<4; i2++)
+		             for (var j2=0; j2<4; j2++)
+		             {
+		                energy_help = Sum_MaxDouble4(BasePenalty(bp_pos_i+1,i), BasePenalty(bp_pos_i+2,i2), BasePenalty(bp_pos_j-2,j2),BasePenalty(bp_pos_j-1,j));
+
+		                tetra_plus_closing[1] = int2char(i);
+		                tetra_plus_closing[2] = int2char(i2);
+		                tetra_plus_closing[3] = int2char(j2);
+		                tetra_plus_closing[4] = int2char(j);
+
+		                energy_help = Sum_MaxDouble3(energy_help, tetra_loop_energy(tetra_plus_closing), mismatch_energies_hairpin[64*bp_assign_i+16*i+4*bp_assign_j+j]);
+
+		                // If the HPLoop would only consist of C's, a penalty of 0.3*size+1.6 has to be added.
+		                // This means that just in case that all bases in the loop are restricted to C by the
+		                // constraints the energy has to be corrected.
+		                // NOT TAKEN INTO ACCOUNT, SINCE THIS IS NOT TAKEN INTO ACCOUNT IN THE VIENNA PACKAGE AS WELL.
+		                //if ((i==1) && (i2==1) && (j2==1) && (j==1))
+		                //   energy_help = Sum_MaxDouble(energy_help,0.3*hairpin_loop_size+1.6);
+
+		                if (energy_help < min)
+		                {
+		                   min = energy_help;
+		                   min_i = i;
+		                   min_i2 = i2;
+		                   min_j2 = j2;
+		                   min_j = j;
+		                }
+		             }
+
+		    energy = Sum_MaxDouble(energy,min);
+		    int_seq[bp_pos_i+1] = min_i;
+		    int_seq[bp_pos_i+2] = min_i2;
+		    int_seq[bp_pos_j-2] = min_j2;
+		    int_seq[bp_pos_j-1] = min_j;
+		    free(tetra_plus_closing);
+
+		    //terminal mismatch energy, if the HLclosing BP is the last one in a stem
+		    if ((StackEnd(bp_pos)) && ((bp_assign == 0) || (bp_assign == 3) || (bp_assign == 4) || (bp_assign == 5)))
+		       energy = Sum_MaxDouble(energy,terminalAU);
+		}
+ 		else //>4
+		{
+    		while (valid_hairpin_loop == false)
+    		{
+       			energy = loop_destabilizing_energies[3*Minimum(hairpin_loop_size,30)-1];
+       			if (hairpin_loop_size > 30)
+          			energy += 1.75*RT*log(hairpin_loop_size/30.0);
+
+       			min = MAX_DOUBLE;
+       			for (var i=0; i<4; i++)
+          			for (var j=0; j<4; j++)
+          			{
+             			// no energy fragment by the closing BP, but penalties have to be taken into account
+             			energy_help = Sum_MaxDouble4(BasePenalty(bp_pos_i+1,i), BasePenalty(bp_pos_j-1,j), PairPenalty(bp_pos, bp_assign_i, bp_assign_j), mismatch_energies_hairpin[64*bp_assign_i+16*i+4*bp_assign_j+j]);
+
+             			if (energy_help < min)
+             			{
+                			min = energy_help;
+                			min_i = i;
+                			min_j = j;
+             			}
+          			}
+
+       			energy = Sum_MaxDouble(energy,min);
+       			int_seq[bp_pos_i+1] = min_i;
+       			int_seq[bp_pos_j-1] = min_j;
+
+       			//find an assignment for the loop (the first and the last base are fixed by min. terminal mismatch,
+       			//thus, starting at the second pos. end at the last but one pos.
+       			for (var pos=2; pos<=hairpin_loop_size-1; pos++)
+          			int_seq[bp_pos_i+pos] = SetFreeBase(bp_pos_i+pos);
+
+       			// If the HPLoop would only consist of C's, a penalty of 0.3*size+1.6 has to be added.
+       			// NOT TAKEN INTO ACCOUNT, SINCE THIS IS NOT TAKEN INTO ACCOUNT IN THE VIENNA PACKAGE AS WELL.
+
+       			// bool onlyCs = true;
+       			// for (int p=bp_pos_i+1; p<bp_pos_j; p++)
+       			//    if ( int_seq[p] != 1) 
+       			//    {
+       			//       onlyCs = false;
+       			//       break;
+       			//    }
+
+       			// if (onlyCs)
+       			//    energy = Sum_MaxDouble(energy,0.3*hairpin_loop_size+1.6);
+
+       			//terminal mismatch energy, if the HLclosing BP is the last one in a stem
+       			if ((StackEnd(bp_pos)) && ((bp_assign == 0) || (bp_assign == 3) || (bp_assign == 4) || (bp_assign == 5)))
+          			energy = Sum_MaxDouble(energy,terminalAU);
+
+       			if (D[bp_pos][bp_assign] == energy)
+          			valid_hairpin_loop = true;
+    		}
+ 		}
+	}
+
+      //**********************************************************************************
+      //**********************************************************************************
+      //MULTILOOP
+      //*****************
+      //fixed the assignments of the free bases in the ML
+      else if (BP_Order[bp_pos][3] > 1)
+      {
+         int* ML_vorgaenger; // pos. in BP_Order of the BPs in the ML, = predecessors of the closing BP
+
+         // finding all stem ends of the ML (stored in the information in Trace)
+         vector <int> stem_ends;
+         for (int vg=BP_Order[bp_pos][3]-1; vg>=0; vg--)
+            stem_ends.push_back(Trace[bp_pos][bp_assign][vg][0]);
+
+         ML_vorgaenger = MultiLoopConnections(BP_Order[bp_pos][3], stem_ends, bp_pos, BaseConnections, BasePairConnections);
+
+         for (i=0; i<BaseConnections.size(); i++) //BaseConnections.size() == BasePairConnections.size()
+         {
+            pair_size = BasePairConnections[i].size();
+
+            bp_at_pair_connection = (int**) malloc(sizeof(int*)*pair_size);
+            for (int a=0; a<pair_size; a++)
+            {
+               bp_at_pair_connection[a] = (int*) malloc(sizeof(int)*2);
+               for (int b=0; b<2; b++)
+                  bp_at_pair_connection[a][b] = 0;
+            }
+
+            /* for bp_at_pair_connection choose the assignment given in Trace*/
+            for (int bp=0; bp<pair_size; bp++)
+            {
+               if (BasePairConnections[i][bp] == bp_pos)
+               {
+                  bp_at_pair_connection[bp][0] = bp_assign_i;
+                  bp_at_pair_connection[bp][1] = bp_assign_j;
+               }
+               else
+               {
+                  bp_at_pair_connection[bp][0] = int_seq[BP_Order[BasePairConnections[i][bp]][0]];
+                  bp_at_pair_connection[bp][1] = int_seq[BP_Order[BasePairConnections[i][bp]][1]];
+               }
+            }
+
+            int* best_connection_bases;
+            best_connection_bases = ConnectionBestFreeBases(BaseConnections[i], BasePairConnections[i], (const int**) bp_at_pair_connection);
+
+            base_size = BaseConnections[i].size();
+            for (int pos=0; pos<base_size; pos++)
+               int_seq[BaseConnections[i][pos]] = best_connection_bases[pos];
+
+            for (int c=0; c<pair_size; c++)
+               free(bp_at_pair_connection[c]);
+
+         } // for i
+
+         for (i=0; i<BaseConnections.size(); i++)
+            BaseConnections[i].clear();
+         BaseConnections.clear();
+
+         for (i=0; i<BasePairConnections.size(); i++)
+            BasePairConnections[i].clear();
+         BasePairConnections.clear();
+      }
+
+      //*******************************************************************************************
+      //*******************************************************************************************
+      //remaining structural elements including free bases (BULGE, INTERIOR LOOP)
+      //************************************************************
+      else if (bp_pos > 0) //then there are predecessors and BL or IL can arise
+      {
+         left_loop_size = BP_Order[bp_pos-1][0] - BP_Order[bp_pos][0] - 1;
+         right_loop_size = BP_Order[bp_pos][1] - BP_Order[bp_pos-1][1] - 1;
+
+         //STACK (do nothing, since there are no free bases)
+         //*************
+         if ((left_loop_size == 0) && (right_loop_size == 0))
+         {
+         }
+
+         //LEFT BULGE
+         //*************
+         else if ((left_loop_size != 0) && (right_loop_size == 0))
+         {
+            //whatever assignments of the bases in the BL ==> Constraints checked in SetFreeBase
+            for (int pos=1; pos<=left_loop_size; pos++)
+               int_seq[BP_Order[bp_pos][0]+pos] = SetFreeBase(BP_Order[bp_pos][0]+pos);
+         }
+
+         // RIGHT BULGE
+         //****************
+         else if ((left_loop_size == 0) && (right_loop_size != 0))
+         {
+            //whatever assignments of the bases in the BL ==> Constraints checked in SetFreeBase
+            for (int pos=1; pos<=right_loop_size; pos++)
+               int_seq[BP_Order[bp_pos-1][1]+pos] = SetFreeBase(BP_Order[bp_pos-1][1]+pos);
+         }
+
+
+         // INTERIOR LOOP
+         //****************
+         else
+         {
+            int bp_before = Trace[bp_pos][bp_assign][0][1];
+            int bp_before_i, bp_before_j;
+            BP2_2(bp_before,bp_before_i,bp_before_j);
+            min = MAX_DOUBLE;
+
+            // special cases:
+            //****************************************************
+            if ((left_loop_size == 1) && (right_loop_size == 1))
+            {
+               for (int x=0; x<4; x++)
+                  for (int y=0; y<4; y++)
+                  {
+                     energy_help = Sum_MaxDouble3(BasePenalty(bp_pos_i+1,x), BasePenalty(bp_pos_j-1,y), interior_loop_1_1_energy[96*bp_assign+24*x+4*bp_before+y]);
+                     if (energy_help < min)
+                     {
+                        min = energy_help;
+                        min1 = x;
+                        min2 = y;
+                     }
+                  }
+               int_seq[bp_pos_i+1] = min1;
+               int_seq[bp_pos_j-1] = min2;
+            }
+            else if ((left_loop_size == 1) && (right_loop_size == 2)) /*x(i-1)-x(i)=2 and y(i)-y(i-1)=3*/
+            {
+               for (int x=0; x<4; x++)
+                  for (int y=0; y<4; y++)
+                     for (int z=0; z<4; z++)
+                     {
+                        energy_help = Sum_MaxDouble4(BasePenalty(bp_pos_i+1,x), BasePenalty(bp_pos_j-1,y), BasePenalty(bp_pos_j-2,z), interior_loop_1_2_energy[384*bp_assign+96*z+24*x+4*bp_before+y]);
+                        if (energy_help < min)
+                        {
+                           min = energy_help;
+                           min1 = x;
+                           min2 = y;
+                           min3 = z;
+                        }
+                     }
+               int_seq[bp_pos_i+1] = min1;
+               int_seq[bp_pos_j-1] = min2;
+               int_seq[bp_pos_j-2] = min3;
+            }
+            else if ((left_loop_size == 2) && (right_loop_size == 1)) /*x(i-1)-x(i)=3 and y(i)-y(i-1)=2*/
+            {
+               for (int x=0; x<4; x++)
+                  for (int y=0; y<4; y++)
+                     for (int z=0; z<4; z++)
+                     {
+                        energy_help = Sum_MaxDouble4(BasePenalty(bp_pos_i+1,z), BasePenalty(bp_pos_i+2,y), BasePenalty(bp_pos_j-1,x), interior_loop_1_2_energy[384*bp_before+96*z+24*x+4*bp_assign+y]);
+                        if (energy_help < min)
+                        {
+                           min = energy_help;
+                           min1 = x;
+                           min2 = y;
+                           min3 = z;
+                        }
+                     }
+               int_seq[bp_pos_i+1] = min3;
+               int_seq[bp_pos_i+2] = min2;
+               int_seq[bp_pos_j-1] = min1;
+            }
+            else if ((left_loop_size == 2) && (right_loop_size == 2))
+            {
+               for (int x1=0; x1<4; x1++)
+                  for (int x2=0; x2<4; x2++)
+                     for (int y1=0; y1<4; y1++)
+                        for (int y2=0; y2<4; y2++)
+                        {
+                           energy_help = Sum_MaxDouble4(BasePenalty(bp_pos_i+1,x1), BasePenalty(bp_pos_i+2,y1), BasePenalty(bp_pos_j-1,x2), BasePenalty(bp_pos_j-2,y2));
+                           energy_help = Sum_MaxDouble(energy_help, interior_loop_2_2_energy[1536*bp_assign+256*bp_before+64*x1+16*x2+4*y1+y2]);
+                           if (energy_help < min)
+                           {
+                              min = energy_help;
+                              min1 = x1;
+                              min2 = x2;
+                              min3 = y1;
+                              min4 = y2;
+                           }
+                        }
+               int_seq[bp_pos_i+1] = min1;
+               int_seq[bp_pos_i+2] = min3;
+               int_seq[bp_pos_j-1] = min2;
+               int_seq[bp_pos_j-2] = min4;
+            }
+
+            //from now on: just interactions with closingBPs, no special cases
+            //**********************************************************************
+            else
+            {
+               // terminal mismatches at both closings:
+               //***************************************
+               // Attention: there are dependencies, if the IL has size 1 at one side of the loop,
+               //            then this base is involved in the terminal mismatches at both closings
+               if (left_loop_size == 1)      //          bp_before_i - bp_before_j
+               {                       //  i1                                      i2
+                                       //                                          i3
+                                       //                bp_assign_i - bp_assign_j
+                  for (int i1=0; i1<4; i1++)
+                     for (int i2=0; i2<4; i2++)
+                       for (int i3=0; i3<4; i3++)
+                       {
+                          energy_help = Sum_MaxDouble3(BasePenalty(bp_pos_i+1,i1), BasePenalty(bp_pos_j-right_loop_size,i2), BasePenalty(bp_pos_j-1,i3));
+
+                          energy_help = Sum_MaxDouble3(energy_help, mismatch_energies_interior[64*bp_before_j+16*i2+4*bp_before_i+i1],
+                          mismatch_energies_interior[64*bp_assign_i+16*i1+4*bp_assign_j+i3]);
+
+                          if (energy_help < min)
+                          {
+                             min = energy_help;
+                             min1 = i1;
+                             min2 = i2;
+                             min3 = i3;
+                          }
+                       }
+
+                  int_seq[bp_pos_i+1] = min1;
+                  int_seq[bp_pos_j-right_loop_size] = min2;
+                  int_seq[bp_pos_j-1] = min3;
+
+                   //remaining bases are assigned randomly
+                  for (int i=2; i<=right_loop_size-1; i++)
+                     int_seq[bp_pos_j-i] = SetFreeBase(bp_pos_j-i);
+               }
+
+               else if (right_loop_size == 1)//          bp_before_i - bp_before_j
+               {                       //  i1                                      i3
+                                       //  i2
+                                       //                bp_assign_i - bp_assign_j
+                  for (int i1=0; i1<4; i1++)
+                     for (int i2=0; i2<4; i2++)
+                        for (int i3=0; i3<4; i3++)
+                        {
+                           energy_help = Sum_MaxDouble3(BasePenalty(bp_pos_i+left_loop_size,i1), BasePenalty(bp_pos_i+1,i2), BasePenalty(bp_pos_j-1,i3));
+
+                           energy_help = Sum_MaxDouble3(energy_help, mismatch_energies_interior[64*bp_before_j+16*i3+4*bp_before_i+i1], mismatch_energies_interior[64*bp_assign_i+16*i2+4*bp_assign_j+i3]);
+
+                           if (energy_help < min)
+                           {
+                              min = energy_help;
+                              min1 = i1;
+                              min2 = i2;
+                              min3 = i3;
+                           }
+                        }
+
+                  int_seq[bp_pos_j-1] = min3;
+                  int_seq[bp_pos_i+1] = min2;
+                  int_seq[bp_pos_i+left_loop_size] = min1;
+
+                   //remaining bases are assigned randomly
+                  for (int i=2; i<=left_loop_size-1; i++)
+                     int_seq[bp_pos_i+i] = SetFreeBase(bp_pos_i+i);
+               }
+
+               else                    //        bp_before_i - bp_before_j
+               {                       //  i1                                      i3
+                                       //  i2                                      i4
+                                       //        bp_assign_i - bp_assign_j
+                  for (int i1=0; i1<4; i1++)
+                     for ( int i3=0; i3<4; i3++)
+                     {
+                        energy_help = Sum_MaxDouble3(BasePenalty(bp_pos_i+left_loop_size,i1), BasePenalty(bp_pos_j-right_loop_size,i3), mismatch_energies_interior[64*bp_before_j+16*i3+4*bp_before_i+i1]);
+                        if (energy_help < min)
+                        {
+                           min = energy_help;
+                           min1 = i1;
+                           min3 = i3;
+                        }
+                     }
+                  int_seq[BP_Order[bp_pos-1][0]-1] = min1;
+                  int_seq[BP_Order[bp_pos-1][1]+1] = min3;
+
+                  min = MAX_DOUBLE;
+                  for (int i2=0; i2<4; i2++)
+                     for ( int i4=0; i4<4; i4++)
+                     {
+                        energy_help = Sum_MaxDouble3(BasePenalty(bp_pos_i+1,i2), BasePenalty(bp_pos_j-1,i4), mismatch_energies_interior[64*bp_assign_i+16*i2+4*bp_assign_j+i4]);
+                        if (energy_help < min)
+                        {
+                           min = energy_help;
+                           min2 = i2;
+                           min4 = i4;
+                        }
+                     }
+                  int_seq[bp_pos_i+1] = min2;
+                  int_seq[bp_pos_j-1] = min4;
+
+                  //remaining bases are assigned randomly
+                  for (int i=2; i<=left_loop_size-1; i++)
+                     int_seq[bp_pos_i+i] = SetFreeBase(bp_pos_i+i);
+                  for (int i=2; i<=right_loop_size-1; i++)
+                     int_seq[bp_pos_j-i] = SetFreeBase(bp_pos_j-i);
+               }
+            }
+         }
+      }
+   } //for bp_pos
+   return int_seq;
+}
 }
 
 
