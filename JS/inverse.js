@@ -456,9 +456,89 @@ function Traceback(){
 	var pair_size, base_size;
 	var i;
 	//Vector declarations 
+	Vvar bp_at_pair_connection;
 
+	var base_energy, energy_help;
 
-	//Milestone July 9 - 8.15pm
+	var min_dang;
+	var min_free_base;
+	if (min_result[0] == MAX_DOUBLE){
+		bp_assign = RandomBasePair();
+	}else{
+		bp_assign = min_result[0];
+	}
+	BP2_2(bp_assign,bp_assign_i,bp_assign_j);
+
+	var vorg;
+	vorg = new Array(BP_Order[numBP][3]);
+	for (var vg=0; vg< Maximum(BP_Order[numBP][3],1); vg++){
+		vorg[vg] = Trace[numBP][bp_assign][vg][0];
+		BP2_2(Trace[numBP][bp_assign][vg][1],bp_i,bp_j);
+		int_seq[BP_Order[vorg[vg]][0]] = bp_i;
+		int_seq[BP_Order[vorg[vg]][1]] = bp_j;
+	}
+
+	if (BP_Order[numBP-1][0] > 0){
+		min_dang = MAX_DOUBLE;
+		min_free_base = -1;
+		for (var free_base = 0; free_base < 4; free_base++){
+			base_energy = Sum_MaxDouble(single_base_stacking_energy[64+16*bp_assign_j+4*bp_assign_i+free_base], BasePenalty(BP_Order[numBP-1][0]-1,free_base));
+			if (min_dang > base_energy){
+				min_dang = base_energy;
+				min_free_base = free_base;
+			}
+		}
+
+		int_seq[BP_Order[numBP-1][0]-1] = min_free_base;
+		if (BP_Order[numBP-1][0] > 1){
+			for (var vor = 0; vor < BP_Order[numBP][0]-1; vor++){
+				int_seq[vor] = SetFreeBase(vor);
+			}
+		}
+	}
+
+	if (BP_Order[numBP-1][1] < brackets.length - 1){
+		EndConnections(BP_Order[numBP][3], vorg, BaseConnections, BasePairConnections);
+
+		for (i=0; i < BaseConnections.size(); i++){
+			pair_size = BasePairConnections[i].size();
+
+			bp_at_pair_connection = new Array(pair_size);
+			for (var a=0; a<pair_size; a++){
+				bp_at_pair_connection[a] = new Array(2);
+				for(var b=0; b<2; b++){
+					bp_at_pair_connection[a][b] = 0;
+				}
+			}
+
+			for (var bp=0; bp<pair_size; bp++){
+				bp_at_pair_connection[bp][0] = int_seq[BP_Order[BasePairConnections[i][bp]][0]];
+				bp_at_pair_connection[bp][1] = int_seq[BP_Order[BasePairConnections[i][bp]][1]];
+			}
+
+			var best_end_connection_bases;
+			best_end_connection_bases = EndConnectionBestFreeBases(BaseConnections[i], BasePairConnections[i], bp_at_pair_connection);
+			
+			base_size = BaseConnections[i].size();
+
+			for(var pos=0; pos<base_size; pos++){
+				int_seq[BaseConnections[i][pos]] = best_end_connection_bases[pos];
+			}
+
+		}
+
+		for (i=0; i < BaseConnections.size(); i++){
+			BaseConnections[i].clear();
+		}
+		BaseConnections.clear();
+
+		for (i=0; i<BasePairConnections.size(); i++){
+			BasePairConnections[i].clear();
+		}
+		BasePairConnections.clear();
+	}
+
+	//Line 581 corresponding
 }
 
 
