@@ -133,7 +133,7 @@ int* MultiLoopConnections(int stem_num, vector<int> & stem_ends, int order_pos_o
  EndBasePairSizes = sizes of the EndBasePairConnections
 *******************************************************/
 
-void MultiLoopConnections(int* stem_ends, int order_pos_of_closing_bp, int** BaseConnections, int *BaseSizes, int** BasePairConnections, int* BasePairSizes)
+MultiLoopConnections(int* stem_ends, int order_pos_of_closing_bp, int** BaseConnections, int *BaseSizes, int** BasePairConnections, int* BasePairSizes)
 {
    int i;
    int stem_num = BP_Order[order_pos_of_closing_bp][3];
