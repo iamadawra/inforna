@@ -693,7 +693,818 @@ function EnergyDiff(pos_j, sequence)
 
 /*-------------------------------------------------------------------------*/
 
-// function local_search ????
+function strcpy(string1, string2) 
+{
+   for(var i = 0; i < string1.length; i++)
+      string1[i] = string2[i];
+}
+
+function isupper(c) { 
+   return c === c.toUpperCase(); 
+}
+
+// attach the .compare method to Array's prototype to call it on any array
+Array.prototype.compare = function (array) {
+    // if the other array is a falsy value, return
+    if (!array)
+        return false;
+
+    // compare lengths - can save a lot of time
+    if (this.length != array.length)
+        return false;
+
+    for (var i = 0; i < this.length; i++) {
+        // Check if we have nested arrays
+        if (this[i] instanceof Array && array[i] instanceof Array) {
+            // recurse into the nested arrays
+            if (!this[i].compare(array[i]))
+                return false;
+        }
+        else if (this[i] != array[i]) {
+            // Warning - two different object instances will never be equal: {x:20} != {x:20}
+            return false;
+        }
+    }
+    return true;
+}
+
+function local_search(start, target, pos_i, pos_j, whole_seq)
+{
+   var i,j,bp_i,bp_j,tt,w1,w2, n_pos, len, flag, pos, n_pos2;
+   var  walk_len;
+   var string, string2, cstring, structure, struct2, beststring;
+   var mut_pos_list, mut_sym_list[MAXALPHA+1], mut_pair_list[2*MAXALPHA+1], help_mut_pos_list;
+   var w1_list, w2_list, mut_position, symbol, bp;
+   var target_table, test_table;
+   var cont;
+   var cost, current_cost, ccost2, best_cost;
+   var cost_function;
+
+   //variabels for the stochastic local search
+   var better;     // if = 1, improve step during the search
+   var max_steps;  // max. number of steps during the stochastic local search
+   var real_steps; // count the steps
+   var ran;     // random number
+
+   var int_seq;
+   var mismatches = 0;  //local variable for reminding the current number of mismatches
+   var mis2, best_mis = num_mis;  //local variable for reminding the number of mismatches (anal. ccost2, best_cost)
+
+   /*whole_seq is the whole sequence and not only the subsequence that is considered in the current run of local_search,
+     whole_seq has to be updated during the run (if a mutation in the subsequence is accepted)
+     ==> that means, the respecting part of the sequence has to be replaced by cstring*/
+
+   //printf("\ntarget:       %s\n", target);
+   //printf("start:        %s\n", start);
+   //printf("num_mis:     %d\n", num_mis);
+
+   len = start.length;
+   if (target.length!=len) {
+      throw("local_search: start and target have unequal length");
+   }
+
+   string    = new Array(len);
+   cstring   = new Array(len);
+   string2   = new Array(len);
+   beststring= new Array(len);
+   structure = new Array(len);
+   struct2   = new Array(len); 
+   mut_pos_list = new Array(len);
+   w1_list = new Array(len);
+   w2_list = new Array(len);
+   target_table = new Array(len);
+   test_table = new Array(len);
+
+   make_ptable(target, target_table);
+
+   for (i=0; i<base; i++) mut_sym_list[i] = i;
+   for (i=0; i<npairs; i++) mut_pair_list[i] = i;
+
+   for (i=0; i<len; i++) 
+      string[i] = start[i];
+
+   walk_len = 0;
+
+   if (fold_type==0)
+      cost_function = mfe_cost;
+   else
+      cost_function = pf_cost;
+   
+   cost = cost_function(string, structure, target);
+
+   if (fold_type==0)
+      ccost2=cost2;
+   else
+   {
+      ccost2 = -1.;
+      cost2=0;
+   }
+   
+   strcpy(cstring, string);
+   strcpy(beststring, string);
+   current_cost = cost;
+   best_cost = cost;
+
+   int_seq = char2int(start);
+
+   /*********************************************************************
+   *               Adaptive Walk / Stochastic Local Search              *
+   *********************************************************************/
+
+   better = 0;
+   real_steps = 0;
+   //max. number of steps depends on the length of the sequence:
+   max_steps = step_multiplier * len;
+
+   if ((search_strategy == 1) || (search_strategy == 3))
+   {
+      if ((cost>0) && (time_out == 0)) do
+      {
+         cont=0;
+
+         if (fold_type==0) /* min free energy fold */
+         {
+            //mutate only the positions that are not paired correctly or adjacent to those
+            make_ptable(structure, test_table);
+
+            for (j=w1=w2=flag=0; j<len; j++)
+               if ((tt=target_table[j])!=test_table[j])
+               {
+                  if ((tt<j)&&(isupper(start[j])))
+                     w1_list[w1++] = j;   /* incorrectly paired */
+                  if ((flag==0)&&(j>0))
+                     if ((target_table[j-1]<j-1)&&isupper(start[j-1]))
+                        w2_list[w2++] = j-1;       /* adjacent to incorrect position */
+                  if (w2>1)
+                     if (w2_list[w2-2]==w2_list[w2-1])
+                        w2--;
+
+                  flag = 1;
+               }
+               else
+               {
+                  if (flag==1)
+                     if ((tt<j)&&isupper(start[j]))
+                        w2_list[w2++] = j;       /* adjacent to incorrect position */
+                  flag = 0;
+               }
+
+            if (neighbour_choice == 1)
+            {
+                  shuffle(w1_list, w1);
+                  shuffle(w2_list, w2);
+
+                  for (j=n_pos=0; j<w1; j++)
+                     mut_pos_list[n_pos++] = w1_list[j];
+                  for (j=0; j<w2; j++)
+                     mut_pos_list[n_pos++] = w2_list[j];
+            }
+            else //neighbour_choice == 2
+            {
+               /*Ediff contains the energy difference for each mutation at all candidate pos.*/
+               init_Ediff();
+
+               // pos. that are not paired correctly are analyzed first, they are analyzed concerning
+               // the order given by av_Ediff
+               //-------------------------------------------------------------------------------------
+               for (i = 0; i<w1; i++)
+                  EnergyDiff(w1_list[i]+pos_i, whole_seq);
+
+               make_av_Ediff();
+
+               n_pos = 0;
+               mut_pos_list = make_mut_pos_list();
+
+               for (i=0; i<struct_len; i++)
+                  if (av_Ediff[mut_pos_list[i]] > MIN_INT)
+                     n_pos++;
+               //translate the pos.numbers to pos.numbers in the current substructure
+               for (i=0; i<n_pos; i++)
+                  mut_pos_list[i] = mut_pos_list[i] - pos_i;
+
+               //**************************************************************************************
+               //**************************************************************************************
+               init_Ediff();
+               //**************************************************************************************
+               //**************************************************************************************
+
+
+               // afterwards mutated the neighbors of the pos. that are not paired correctly, they are
+               // analyzed concerning the order given by av_Ediff
+               //---------------------------------------------------------------------------------------------
+               for (i = 0; i<w2; i++)
+                  EnergyDiff(w2_list[i]+pos_i, whole_seq);
+               make_av_Ediff();
+
+               n_pos2 = n_pos;
+               help_mut_pos_list = make_mut_pos_list();
+
+               for (i=0; i<struct_len-w1; i++)
+                  if (av_Ediff[help_mut_pos_list[i]] > MIN_INT)
+                  {
+                     mut_pos_list[i+n_pos2] = help_mut_pos_list[i] - pos_i;
+                     n_pos++;
+                  }
+            }
+         }
+         else /* partition_function */
+         {
+            if (neighbour_choice == 1)
+            {
+               for (j=n_pos=0; j<len; j++)
+                  if (isupper(start[j]))
+                     if (target_table[j]<=j)
+                        mut_pos_list[n_pos++] = j;
+               shuffle(mut_pos_list, n_pos);
+            }
+            else //neighbour_choice == 2
+            {
+          /*pf-mode (taking into account all positions)*/
+               for (j = 0; j<len; j++)
+                  if (isupper(start[j]))
+                     if (target_table[j]<=j)
+                        EnergyDiff(j, whole_seq);
+
+               make_av_Ediff();
+
+               n_pos = 0;
+               mut_pos_list = make_mut_pos_list();
+               for (i=0; i<struct_len; i++)
+                  if (av_Ediff[mut_pos_list[i]] > MIN_INT)
+                     n_pos++;
+            }
+         }
+
+         mis2 = 0;
+         for (mut_position=0; mut_position<n_pos; mut_position++)
+         {
+            strcpy(string, cstring);
+            shuffle(mut_sym_list,  base);
+            shuffle(mut_pair_list, npairs);
+
+            i = mut_pos_list[mut_position];
+
+            if (target_table[i]<0) /* unpaired base */
+               for (symbol=0;symbol<base;symbol++)
+               {
+                  if(cstring[i] == int2char(mut_sym_list[symbol]))
+                     continue;
+
+                  /******************************************************/
+                  /*                 mismatch testing                   */
+                  /******************************************************/
+
+                  mismatches = 0;
+                  // if in the current sequence is no mismatch at the considered position
+                  if (seq_constraints[pos_i+i][char2int_base(cstring[i])] == 1)
+                  {
+                     // if the assignment of the base is forbidden and maximal number of mismatches is reached or the base is located 
+                     // outside the mismatch interval, no further testing.
+                     if ((seq_constraints[pos_i+i][mut_sym_list[symbol]] == 0) && ((num_mis >= max_mis) || (mis_vec[pos_i+i] == 0)))
+                        continue;
+
+                     // if the assignment of the base is forbidden, this mismatch should be added
+                     // if we are still in the for-loop, it is clear that the constrained base is located in the mismatch interval. 
+                     // thus, it is not necessary to test it again
+                     // if ((seq_constraints[pos_i+i][mut_sym_list[symbol]] == 0) && (PosInMisInterval(pos_i+i) == 1))
+                     if (seq_constraints[pos_i+i][mut_sym_list[symbol]] == 0)
+                        mismatches = 1;
+                  }
+                  // if in the current sequence the current position is already a mismatch: everything is possible, i.e. it can be mutated
+                  // to another mismatch or to a match
+                  else
+                     if (seq_constraints[pos_i+i][mut_sym_list[symbol]] == 1)
+                        mismatches = -1; //current base is a mismatch but the new one not => one mismatch less
+
+                  /******************************************************/
+
+
+                  string[i] = int2char(mut_sym_list[symbol]);
+
+                  if (only_mutation_is_step == 0)
+                  {
+                     real_steps++;
+                     if ((search_strategy == 3) && (real_steps > max_steps))
+                        break;
+                  }
+
+                  cost = cost_function(string, structure, target);
+                  ran = urn(); // FIX
+
+                  if ( cost < current_cost )
+                  {
+                     better = 1;
+                     break;
+                  }
+                  //during the SLS: even worse muatations are accepted with a small probability
+                  if ((search_strategy == 3) && (ran < p_accept))
+                  {
+                     better = 1;
+                     break;
+                  }
+
+                  if (( cost == current_cost)&&(cost2<ccost2))
+                  {
+                     strcpy(string2, string);
+                     strcpy(struct2, structure);
+                     ccost2 = cost2;
+                     mis2 = mismatches;
+                  }
+               } //for (symbol)
+            else  /* paired base */
+               for  (bp=0; bp<npairs; bp++)
+               {
+                  j = target_table[i]; //finging the binding base
+                  BP2_2(mut_pair_list[bp], bp_i, bp_j);
+
+                  if ((cstring[i] == int2char(bp_i)) && (cstring[j] == int2char(bp_j)))
+                     continue;
+
+                  /******************************************************/
+                  /*                 mismatch testing                   */
+                  /******************************************************/
+
+                  mismatches = 0;
+
+                  // first testing whether the mismatches are allowed
+                  if (((mis_vec[pos_i+i] == 0) && (seq_constraints[pos_i+i][bp_i] == 0)) || ((mis_vec[pos_i+j] == 0) && (seq_constraints[pos_i+j][bp_j] == 0)))
+                     continue;
+
+                  // if in the current sequence are no mismatches at the considered positions
+                  if ((seq_constraints[pos_i+i][char2int_base(cstring[i])] == 1) && (seq_constraints[pos_i+j][char2int_base(cstring[j])] == 1))
+                  {
+                     // if the assignment of the bases is forbidden and maximal number of mismatches is reached, no further testing.
+                     // (that the mismatches are valid has already been tested)
+                     if ((seq_constraints[pos_i+i][bp_i] == 0) && (num_mis >= max_mis))
+                        continue;
+
+                     if ((seq_constraints[pos_i+j][bp_j] == 0) && (num_mis >= max_mis))
+                        continue;
+
+                     // if the assignment of both positions is forbidden and the maximal number of mismatches - 1 is reached, no further testing.
+                     if (((seq_constraints[pos_i+i][bp_i] == 0) && (seq_constraints[pos_i+j][bp_j] == 0)) && (num_mis >= max_mis-1))
+                        continue;
+
+                     // if the assignment of the base is forbidden, this mismatch should be added
+                     // it is clear that the constrained bases are valid for mismatches
+                     if (seq_constraints[pos_i+i][bp_i] == 0)
+                        mismatches++;
+                     if (seq_constraints[pos_i+j][bp_j] == 0)
+                        mismatches++;
+                  }
+                  // if in the current sequence is already one mismatch at one of the two considered positions
+                  else if ((seq_constraints[pos_i+i][char2int_base(cstring[i])] == 1) || (seq_constraints[pos_i+j][char2int_base(cstring[j])] == 1))
+                  {
+                     // if there are one match and one mismatch currently and after the mutation two matches: allowed but the number of mismatches reduces
+                     if ((seq_constraints[pos_i+i][bp_i] == 1) && (seq_constraints[pos_i+j][bp_j] == 1))
+                        mismatches--;
+                     // if there are one match and one mismatch currently and after the mutation as well: the number of mismatches remains unchanged
+                     // (it is already clear that the mismatches are valid)
+                     //else if ((seq_constraints[pos_i+i][bp_i] == 0) && (seq_constraints[pos_i+j][bp_j] == 1))
+                     //else if ((seq_constraints[pos_i+i][bp_i] == 1) && (seq_constraints[pos_i+j][bp_j] == 0))
+
+                     // if there are one match and one mismatch currently and after the mutation two mismatches:
+                     // the number of mismatches has to be increased by one and we have to take care of the maximal number 
+                     // of allowed mismatches (max_mis)
+                     else if ((seq_constraints[pos_i+i][bp_i] == 0) && (seq_constraints[pos_i+j][bp_j] == 0))
+                     {
+                        if (num_mis >= max_mis)
+                           continue;
+                        else
+                           mismatches++;
+                     }
+                  }
+                  // if both current positions are already mismatches, : everything is possible, i.e. it can be mutated
+                  // to another mismatch or to a match
+                  else
+                  {
+                     //current base is a mismatch but the new one not => one mismatch less
+                     if (seq_constraints[pos_i+i][bp_i] == 1)
+                        mismatches--;
+                     if (seq_constraints[pos_i+j][bp_j] == 1)
+                        mismatches--;
+                  }
+
+                  /******************************************************/
+
+                  string[i] = int2char(bp_i);
+                  string[j] = int2char(bp_j);
+
+                  if (only_mutation_is_step == 0)
+                  {
+                     real_steps++;
+                     if ((search_strategy == 3) && (real_steps > max_steps))
+                        break;
+                  }
+
+                  cost = cost_function(string, structure, target);
+                  ran = urn();  // FIX
+
+                  if ( cost < current_cost )
+                  {
+                     better = 1;
+                     break;
+                  }
+                  //during the SLS: even worse muatations are accepted with a small probability
+                  if ((search_strategy == 3) && (ran < p_accept))
+                  {
+                     better = 1;
+                     break;
+                  }
+                  if (( cost == current_cost)&&(cost2<ccost2))
+                  {
+                     strcpy(string2, string);
+                     strcpy(struct2, structure);
+                     ccost2 = cost2;
+                     mis2 = mismatches;
+                  }
+               } //for (bp)
+
+            if (better == 1)
+            {
+               better = 0;
+               strcpy(cstring, string);
+               current_cost = cost;
+               num_mis += mismatches;
+
+               if (current_cost < best_cost)
+               {
+                  best_cost = current_cost;
+                  strcpy(beststring, cstring);
+                  best_mis = num_mis;
+               }
+
+               if (only_mutation_is_step == 1)
+               {
+                  real_steps++;
+                  if ((search_strategy == 3) && (real_steps > max_steps))
+                     break;
+               }
+
+               ccost2 = cost2;
+               walk_len++;
+               if (cost > 0)
+                  cont = 1;
+               break;
+            }
+            if ((search_strategy == 3) && (real_steps >= max_steps))
+               break;
+         } //for (mut_position)
+
+         if ((current_cost>0)&&(cont==0)&&(string2[0])) 
+         {
+           /* no mutation that decreased cost was found,
+              but the the sequence in string2 decreases cost2 while keeping
+              cost constant */
+            strcpy(cstring, string2);
+            strcpy(structure, struct2);
+            //nc2++;
+            cont=1;
+            num_mis += mis2;
+         }
+
+         //cstring is the new sequence
+         //the current subsequence has to be updated in whole_seq
+         for (pos = pos_i; pos <=pos_j; pos++)
+            whole_seq[pos] = cstring[pos-pos_i];
+            
+         if (search_strategy == 3)
+         {
+            //stopp, if max. number of steps OR cost = 0 OR no allowed positions for mutation
+            if ((real_steps >= max_steps) || (cost == 0) || (n_pos == 0))
+               cont = 0;
+            else
+               cont = 1;
+         }
+
+         zw_time = new Date().getTime() / 1000;
+         if (zw_time-start_time >= TIME_OUT_TIME)
+         {
+            time_out = 1;
+            break;
+         }
+         //printf("cstring:      %s ==> %d\n", cstring, num_mis);
+
+      } while (cont);
+
+
+   } //if search_strategy == 1
+
+   /*********************************************************************
+   *                 Full Local Search                                  *
+   *********************************************************************/
+   else if (search_strategy == 2)
+   {
+      if ((cost>0) && (time_out == 0)) do
+      {
+         cont=0;
+
+         if (fold_type==0) /* min free energy fold */
+         {
+            make_ptable(structure, test_table);
+            for (j=w1=w2=flag=0; j<len; j++)
+               if ((tt=target_table[j])!=test_table[j])
+               {
+                  if ((tt<j)&&(isupper(start[j]))) /* incorrectly paired */
+                     w1_list[w1++] = j;
+                  if ((flag==0)&&(j>0))
+                     if ((target_table[j-1]<j-1)&&isupper(start[j-1]))
+                        w2_list[w2++] = j-1;                  /* adjacent to incorrect position */
+                  if (w2>1)
+                     if (w2_list[w2-2]==w2_list[w2-1])
+                        w2--;
+
+                  flag = 1;
+               }
+               else
+               {
+                  if (flag==1)
+                     if ((tt<j)&&isupper(start[j]))
+                        w2_list[w2++] = j;                   /* adjacent to incorrect position */
+                  flag = 0;
+               }
+               shuffle(w1_list, w1);
+               shuffle(w2_list, w2);
+
+               for (j=n_pos=0; j<w1; j++)
+                  mut_pos_list[n_pos++] = w1_list[j];
+               for (j=0; j<w2; j++)
+                  mut_pos_list[n_pos++] = w2_list[j];
+         }
+         else /* partition_function */
+         {
+            for (j=n_pos=0; j<len; j++)
+               if (isupper(start[j]))
+                  if (target_table[j]<=j)
+                     mut_pos_list[n_pos++] = j;
+            shuffle(mut_pos_list, n_pos);
+         }
+
+         mis2 = 0;
+         best_cost = current_cost;
+         strcpy(beststring,cstring);
+
+         for (mut_position=0; mut_position<n_pos; mut_position++)
+         {
+            strcpy(string, cstring);
+            shuffle(mut_sym_list,  base);
+            shuffle(mut_pair_list, npairs);
+
+            i = mut_pos_list[mut_position];
+
+            if (target_table[i]<0) /* unpaired base */
+               for (symbol=0;symbol<base;symbol++)
+               {
+                  if(cstring[i]== int2char(mut_sym_list[symbol]))
+                     continue;
+
+                  /******************************************************/
+                  /*                 mismatch testing                   */
+                  /******************************************************/
+
+                  mismatches = 0;
+                  // if in the current sequence is no mismatch at the considered position
+                  if (seq_constraints[pos_i+i][char2int_base(cstring[i])] == 1)
+                  {
+                     // if the assignment of the base is forbidden and maximal number of mismatches is reached or the base is located 
+                     // outside the mismatch interval, no further testing.
+                     if ((seq_constraints[pos_i+i][mut_sym_list[symbol]] == 0) && ((num_mis >= max_mis) || (mis_vec[pos_i+i] == 0)))
+                        continue;
+
+                     // if the assignment of the base is forbidden, this mismatch should be added
+                     // if we are still in the for-loop, it is clear that the constrained base is located in the mismatch interval. 
+                     // thus, it is not necessary to test it again
+                     // if ((seq_constraints[pos_i+i][mut_sym_list[symbol]] == 0) && (PosInMisInterval(pos_i+i) == 1))
+                     if (seq_constraints[pos_i+i][mut_sym_list[symbol]] == 0)
+                        mismatches = 1;
+                  }
+                  // if in the current sequence the current position is already a mismatch: everything is possible, i.e. it can be mutated
+                  // to another mismatch or to a match
+                  else
+                     if (seq_constraints[pos_i+i][mut_sym_list[symbol]] == 1)
+                        mismatches = -1; //current base is a mismatch but the new one not => one mismatch less
+
+                  /******************************************************/
+
+                  string[i] = int2char(mut_sym_list[symbol]);
+                  cost = cost_function(string, structure, target);
+
+                  if ( cost < current_cost )
+                  {
+                     best_cost = cost;
+                     strcpy(beststring,string);
+                     best_mis = num_mis + mismatches;
+                     //always compare to the best one found
+                     ccost2 = cost2;
+                  }
+                  if (( cost == current_cost)&&(cost2<ccost2))
+                  {
+                     //accept (without storing in string2), since all other will be tested as well
+                     strcpy(beststring,string);
+                     ccost2 = cost2;
+                     best_mis = num_mis + mismatches;
+                  }
+               }
+            else  /* paired base */
+               for  (bp=0; bp<npairs; bp++)
+               {
+                  j = target_table[i]; //finging the binding base
+                  BP2_2(mut_pair_list[bp], bp_i, bp_j);
+
+                  if ((cstring[i] == bp_i) && (cstring[j] == bp_j))
+                     continue;
+
+                  /******************************************************/
+                  /*                 mismatch testing                   */
+                  /******************************************************/
+
+                  mismatches = 0;
+
+                  // first testing whether the mismatches are allowed
+                  /**************************************************/
+                  if (((mis_vec[pos_i+i] == 0) && (seq_constraints[pos_i+i][bp_i] == 0)) || ((mis_vec[pos_i+j] == 0) && (seq_constraints[pos_i+j][bp_j] == 0)))
+                     continue;
+                  /**************************************************/
+
+                  // if in the current sequence are no mismatches at the considered positions
+                  if ((seq_constraints[pos_i+i][char2int_base(cstring[i])] == 1) && (seq_constraints[pos_i+j][char2int_base(cstring[j])] == 1))
+                  {
+                     // if the assignment of the bases is forbidden and maximal number of mismatches is reached, no further testing.
+                     // (that the mismatches are valid has already been tested)
+                     if ((seq_constraints[pos_i+i][bp_i] == 0) && (num_mis >= max_mis))
+                        continue;
+                     if ((seq_constraints[pos_i+j][bp_j] == 0) && (num_mis >= max_mis))
+                        continue;
+                     // if the assignment of both positions is forbidden and the maximal number of mismatches - 1 is reached, no further testing.
+                     if (((seq_constraints[pos_i+i][bp_i] == 0) && (seq_constraints[pos_i+j][bp_j] == 0)) && (num_mis >= max_mis-1))
+                        continue;
+
+                     // if the assignment of the base is forbidden, this mismatch should be added
+                     // it is clear that the constrained bases are valid for mismatches
+                     if (seq_constraints[pos_i+i][bp_i] == 0)
+                        mismatches++;
+                     if (seq_constraints[pos_i+j][bp_j] == 0)
+                        mismatches++;
+                  }
+                  // if in the current sequence is already one mismatch at one of the two considered positions
+                  else if ((seq_constraints[pos_i+i][char2int_base(cstring[i])] == 1) || (seq_constraints[pos_i+j][char2int_base(cstring[j])] == 1))
+                  {
+                     // if there are one match and one mismatch currently and after the mutation two matches: allowed but the number of mismatches reduces
+                     if ((seq_constraints[pos_i+i][bp_i] == 1) && (seq_constraints[pos_i+j][bp_j] == 1))
+                        mismatches--;
+                     // if there are one match and one mismatch currently and after the mutation as well: the number of mismatches remains unchanged
+                     // (it is already clear that the mismatches are valid)
+                     //else if ((seq_constraints[pos_i+i][bp_i] == 0) && (seq_constraints[pos_i+j][bp_j] == 1))
+                     //else if ((seq_constraints[pos_i+i][bp_i] == 1) && (seq_constraints[pos_i+j][bp_j] == 0))
+
+                     // if there are one match and one mismatch currently and after the mutation two mismatches:
+                     // the number of mismatches has to be increased by one and we have to take care of the maximal number 
+                     // of allowed mismatches (max_mis)
+                     else if ((seq_constraints[pos_i+i][bp_i] == 0) && (seq_constraints[pos_i+j][bp_j] == 0))
+                     {
+                        if (num_mis >= max_mis)
+                           continue;
+                        else
+                           mismatches++;
+                     }
+                  }
+                  // if both current positions are already mismatches, : everything is possible, i.e. it can be mutated
+                  // to another mismatch or to a match
+                  else
+                  {
+                     //current base is a mismatch but the new one not => one mismatch less
+                     if (seq_constraints[pos_i+i][bp_i] == 1)
+                        mismatches--;
+                     if (seq_constraints[pos_i+j][bp_j] == 1)
+                        mismatches--;
+                  }
+
+
+                  /*// if in the current sequence are no mismatches at the considered positions
+                  if ((seq_constraints[pos_i+i][char2int_base(cstring[i])] == 1) && (seq_constraints[pos_i+j][char2int_base(cstring[j])] == 1))
+                  {
+                     // if the assignment of the bases is forbidden and maximal number of mismatches is reached or the base is located
+                     // outside the mismatch interval, no further testing.
+                     if ((seq_constraints[pos_i+i][bp_i] == 0) && ((num_mis >= max_mis) || (mis_vec[pos_i+i] == 0)))
+                        continue;
+                     if ((seq_constraints[pos_i+j][bp_j] == 0) && ((num_mis >= max_mis) || (mis_vec[pos_i+j] == 0)))
+                        continue;
+
+                     // here, it is clear that both positions are in the mismatch interval if they are constrained (no interval testing needed)
+                     // if the assignment of both positions is forbidden and the maximal number of mismatches - 1 is reached, no further testing.
+                     if (((seq_constraints[pos_i+i][bp_i] == 0) && (seq_constraints[pos_i+j][bp_j] == 0)) && (num_mis >= max_mis-1))
+                        continue;
+
+                     // if the assignment of the base is forbidden, this mismatch should be added
+                     // if we are still in the for-loop, it is clear that the constrained bases are located in the mismatch interval.
+                     // thus, it is not necessary to test it again
+                     //if ((seq_constraints[pos_i+i][bp_i] == 0) && (PosInMisInterval(pos_i+i) == 1))
+                     if (seq_constraints[pos_i+i][bp_i] == 0)
+                        mismatches++;
+                     if (seq_constraints[pos_i+j][bp_j] == 0)
+                        mismatches++;
+                  }
+                  // if in the current sequence is already one mismatch at one of the two considered positions
+                  else if ((seq_constraints[pos_i+i][char2int_base(cstring[i])] == 1) || (seq_constraints[pos_i+j][char2int_base(cstring[j])] == 1))
+                  {
+                     // if there are one match and one mismatch currently and after the mutation two matches: allowed but the number of mismatches reduces
+                     if ((seq_constraints[pos_i+i][bp_i] == 1) && (seq_constraints[pos_i+j][bp_j] == 1))
+                        mismatches--;
+                     // if there are one match and one mismatch currently and after the mutation as well: we have to test whether the mismatch is in the 
+                     // allowed mismatch interval, furthermore the number of mismatches remains unchanged
+                     else if ((seq_constraints[pos_i+i][bp_i] == 0) && (seq_constraints[pos_i+j][bp_j] == 1))
+                     {
+                        //if mismatch not in the mismatch interval
+                        if (mis_vec[pos_i+i] == 0)
+                           continue;
+                     }
+                     else if ((seq_constraints[pos_i+i][bp_i] == 1) && (seq_constraints[pos_i+j][bp_j] == 0))
+                     {
+                        //if mismatch not in the mismatch interval
+                        if (mis_vec[pos_i+j] == 0)
+                           continue;
+                     }
+                     // if there are one match and one mismatch currently and after the mutation two mismatches: we have to test whether the
+                     // mismatches are in the allowed mismatch interval, furthermore the number of mismatches has to be increased by one and
+                     // we have to take care of the maximal number of allowed mismatches (max_mis)
+                     else //if ((seq_constraints[pos_i+i][bp_i] == 0) && (seq_constraints[pos_i+j][bp_j] == 0))
+                     {
+                        if ((mis_vec[pos_i+i] == 0) || (mis_vec[pos_i+j] == 0) || (num_mis >= max_mis)) 
+                           continue;
+                        else
+                           mismatches++;
+                     }
+                  }
+                  // if both current positions are already mismatches, : everything is possible, i.e. it can be mutated
+                  // to another mismatch or to a match
+                  else
+                  {
+                     //current base is a mismatch but the new one not => one mismatch less
+                     if (seq_constraints[pos_i+i][bp_i] == 1)
+                        mismatches--;
+                     if (seq_constraints[pos_i+j][bp_j] == 1)
+                        mismatches--;
+                  }*/
+
+                  /******************************************************/
+
+                  string[i] = int2char(bp_i);
+                  string[j] = int2char(bp_j);
+
+                  cost = cost_function(string, structure, target);
+
+                  if ( cost < current_cost )
+                  {
+                     best_cost = cost;
+                     strcpy(beststring,string);
+                     //always compare to the best one found
+                     ccost2 = cost2;
+                     best_mis = num_mis + mismatches;
+                  }
+                  if (( cost == current_cost)&&(cost2<ccost2))
+                  {
+                     strcpy(beststring,string);
+                     ccost2 = cost2;
+                     best_mis = num_mis + mismatches;
+                  }
+               }
+         } /*for mut_position*/
+
+         if (!(cstring.compare(beststring)) && (best_cost <= current_cost))
+         {
+            strcpy(cstring, beststring);
+            current_cost = best_cost;
+            walk_len++;
+            num_mis = best_mis;
+
+            // pf-mode: cost always > 0, = probability
+            // mfe-mode: cost > 0, until sructures are identical (BP-Dist)
+            if (best_cost > 0)
+               cont = 1;
+         }
+
+         zw_time = new Date().getTime() / 1000;
+         if (zw_time-start_time >= TIME_OUT_TIME)
+         {
+            time_out = 1;
+            break;
+         }
+
+      } while (cont);
+
+   } // else if (search_strategy == 2)
+
+   /****************************************************************************
+   ****************************************************************************/
+
+   for (i=0; i<len; i++)
+      if (isupper(start[i]))
+         start[i]=beststring[i];
+
+   num_mis = best_mis;
+
+   return best_cost;
+}
 
 
 /*-------------------------------------------------------------------------*/
