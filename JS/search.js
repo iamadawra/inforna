@@ -989,7 +989,7 @@ function local_search(start, target, pos_i, pos_j, whole_seq)
                   }
 
                   cost = cost_function(string, structure, target);
-                  ran = urn(); // FIX
+                  ran = Math.Random();
 
                   if ( cost < current_cost )
                   {
@@ -1098,7 +1098,7 @@ function local_search(start, target, pos_i, pos_j, whole_seq)
                   }
 
                   cost = cost_function(string, structure, target);
-                  ran = urn();  // FIX
+                  ran = Math.random();
 
                   if ( cost < current_cost )
                   {
