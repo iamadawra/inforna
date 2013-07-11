@@ -16,7 +16,6 @@ Vector.prototype = {
   // Returns the modulus ('length') of the vector
   modulus: function() {
     return Math.sqrt(this.dot(this));
-  },
 
   // Returns true iff the vector is equal to the argument
   eql: function(vector) {

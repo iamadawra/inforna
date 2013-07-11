@@ -752,11 +752,11 @@ function Traceback(){
       //fixed the assignments of the free bases in the ML
       else if (BP_Order[bp_pos][3] > 1)
       {
-         int* ML_vorgaenger; // pos. in BP_Order of the BPs in the ML, = predecessors of the closing BP
+         var ML_vorgaenger; // pos. in BP_Order of the BPs in the ML, = predecessors of the closing BP
 
          // finding all stem ends of the ML (stored in the information in Trace)
          vector <int> stem_ends;
-         for (int vg=BP_Order[bp_pos][3]-1; vg>=0; vg--)
+         for (var vg=BP_Order[bp_pos][3]-1; vg>=0; vg--)
             stem_ends.push_back(Trace[bp_pos][bp_assign][vg][0]);
 
          ML_vorgaenger = MultiLoopConnections(BP_Order[bp_pos][3], stem_ends, bp_pos, BaseConnections, BasePairConnections);
@@ -766,15 +766,15 @@ function Traceback(){
             pair_size = BasePairConnections[i].size();
 
             bp_at_pair_connection = (int**) malloc(sizeof(int*)*pair_size);
-            for (int a=0; a<pair_size; a++)
+            for (var a=0; a<pair_size; a++)
             {
                bp_at_pair_connection[a] = (int*) malloc(sizeof(int)*2);
-               for (int b=0; b<2; b++)
+               for (var b=0; b<2; b++)
                   bp_at_pair_connection[a][b] = 0;
             }
 
             /* for bp_at_pair_connection choose the assignment given in Trace*/
-            for (int bp=0; bp<pair_size; bp++)
+            for (var bp=0; bp<pair_size; bp++)
             {
                if (BasePairConnections[i][bp] == bp_pos)
                {
@@ -788,14 +788,14 @@ function Traceback(){
                }
             }
 
-            int* best_connection_bases;
+            var best_connection_bases;
             best_connection_bases = ConnectionBestFreeBases(BaseConnections[i], BasePairConnections[i], (const int**) bp_at_pair_connection);
 
             base_size = BaseConnections[i].size();
-            for (int pos=0; pos<base_size; pos++)
+            for (var pos=0; pos<base_size; pos++)
                int_seq[BaseConnections[i][pos]] = best_connection_bases[pos];
 
-            for (int c=0; c<pair_size; c++)
+            for (var c=0; c<pair_size; c++)
                free(bp_at_pair_connection[c]);
 
          } // for i
@@ -829,7 +829,7 @@ function Traceback(){
          else if ((left_loop_size != 0) && (right_loop_size == 0))
          {
             //whatever assignments of the bases in the BL ==> Constraints checked in SetFreeBase
-            for (int pos=1; pos<=left_loop_size; pos++)
+            for (var pos=1; pos<=left_loop_size; pos++)
                int_seq[BP_Order[bp_pos][0]+pos] = SetFreeBase(BP_Order[bp_pos][0]+pos);
          }
 
@@ -847,8 +847,8 @@ function Traceback(){
          //****************
          else
          {
-            int bp_before = Trace[bp_pos][bp_assign][0][1];
-            int bp_before_i, bp_before_j;
+            var bp_before = Trace[bp_pos][bp_assign][0][1];
+            var bp_before_i, bp_before_j;
             BP2_2(bp_before,bp_before_i,bp_before_j);
             min = MAX_DOUBLE;
 
@@ -856,8 +856,8 @@ function Traceback(){
             //****************************************************
             if ((left_loop_size == 1) && (right_loop_size == 1))
             {
-               for (int x=0; x<4; x++)
-                  for (int y=0; y<4; y++)
+               for (var x=0; x<4; x++)
+                  for (var y=0; y<4; y++)
                   {
                      energy_help = Sum_MaxDouble3(BasePenalty(bp_pos_i+1,x), BasePenalty(bp_pos_j-1,y), interior_loop_1_1_energy[96*bp_assign+24*x+4*bp_before+y]);
                      if (energy_help < min)
@@ -872,9 +872,9 @@ function Traceback(){
             }
             else if ((left_loop_size == 1) && (right_loop_size == 2)) /*x(i-1)-x(i)=2 and y(i)-y(i-1)=3*/
             {
-               for (int x=0; x<4; x++)
-                  for (int y=0; y<4; y++)
-                     for (int z=0; z<4; z++)
+               for (var x=0; x<4; x++)
+                  for (var y=0; y<4; y++)
+                     for (var z=0; z<4; z++)
                      {
                         energy_help = Sum_MaxDouble4(BasePenalty(bp_pos_i+1,x), BasePenalty(bp_pos_j-1,y), BasePenalty(bp_pos_j-2,z), interior_loop_1_2_energy[384*bp_assign+96*z+24*x+4*bp_before+y]);
                         if (energy_help < min)
@@ -891,9 +891,9 @@ function Traceback(){
             }
             else if ((left_loop_size == 2) && (right_loop_size == 1)) /*x(i-1)-x(i)=3 and y(i)-y(i-1)=2*/
             {
-               for (int x=0; x<4; x++)
-                  for (int y=0; y<4; y++)
-                     for (int z=0; z<4; z++)
+               for (var x=0; x<4; x++)
+                  for (var y=0; y<4; y++)
+                     for (var z=0; z<4; z++)
                      {
                         energy_help = Sum_MaxDouble4(BasePenalty(bp_pos_i+1,z), BasePenalty(bp_pos_i+2,y), BasePenalty(bp_pos_j-1,x), interior_loop_1_2_energy[384*bp_before+96*z+24*x+4*bp_assign+y]);
                         if (energy_help < min)
@@ -910,10 +910,10 @@ function Traceback(){
             }
             else if ((left_loop_size == 2) && (right_loop_size == 2))
             {
-               for (int x1=0; x1<4; x1++)
-                  for (int x2=0; x2<4; x2++)
-                     for (int y1=0; y1<4; y1++)
-                        for (int y2=0; y2<4; y2++)
+               for (var x1=0; x1<4; x1++)
+                  for (var x2=0; x2<4; x2++)
+                     for (var y1=0; y1<4; y1++)
+                        for (var y2=0; y2<4; y2++)
                         {
                            energy_help = Sum_MaxDouble4(BasePenalty(bp_pos_i+1,x1), BasePenalty(bp_pos_i+2,y1), BasePenalty(bp_pos_j-1,x2), BasePenalty(bp_pos_j-2,y2));
                            energy_help = Sum_MaxDouble(energy_help, interior_loop_2_2_energy[1536*bp_assign+256*bp_before+64*x1+16*x2+4*y1+y2]);
@@ -944,9 +944,9 @@ function Traceback(){
                {                       //  i1                                      i2
                                        //                                          i3
                                        //                bp_assign_i - bp_assign_j
-                  for (int i1=0; i1<4; i1++)
-                     for (int i2=0; i2<4; i2++)
-                       for (int i3=0; i3<4; i3++)
+                  for (var i1=0; i1<4; i1++)
+                     for (var i2=0; i2<4; i2++)
+                       for (var i3=0; i3<4; i3++)
                        {
                           energy_help = Sum_MaxDouble3(BasePenalty(bp_pos_i+1,i1), BasePenalty(bp_pos_j-right_loop_size,i2), BasePenalty(bp_pos_j-1,i3));
 
@@ -967,7 +967,7 @@ function Traceback(){
                   int_seq[bp_pos_j-1] = min3;
 
                    //remaining bases are assigned randomly
-                  for (int i=2; i<=right_loop_size-1; i++)
+                  for (var i=2; i<=right_loop_size-1; i++)
                      int_seq[bp_pos_j-i] = SetFreeBase(bp_pos_j-i);
                }
 
@@ -975,9 +975,9 @@ function Traceback(){
                {                       //  i1                                      i3
                                        //  i2
                                        //                bp_assign_i - bp_assign_j
-                  for (int i1=0; i1<4; i1++)
-                     for (int i2=0; i2<4; i2++)
-                        for (int i3=0; i3<4; i3++)
+                  for (var i1=0; i1<4; i1++)
+                     for (var i2=0; i2<4; i2++)
+                        for (var i3=0; i3<4; i3++)
                         {
                            energy_help = Sum_MaxDouble3(BasePenalty(bp_pos_i+left_loop_size,i1), BasePenalty(bp_pos_i+1,i2), BasePenalty(bp_pos_j-1,i3));
 
@@ -997,7 +997,7 @@ function Traceback(){
                   int_seq[bp_pos_i+left_loop_size] = min1;
 
                    //remaining bases are assigned randomly
-                  for (int i=2; i<=left_loop_size-1; i++)
+                  for (var i=2; i<=left_loop_size-1; i++)
                      int_seq[bp_pos_i+i] = SetFreeBase(bp_pos_i+i);
                }
 
@@ -1005,8 +1005,8 @@ function Traceback(){
                {                       //  i1                                      i3
                                        //  i2                                      i4
                                        //        bp_assign_i - bp_assign_j
-                  for (int i1=0; i1<4; i1++)
-                     for ( int i3=0; i3<4; i3++)
+                  for (var i1=0; i1<4; i1++)
+                     for ( var i3=0; i3<4; i3++)
                      {
                         energy_help = Sum_MaxDouble3(BasePenalty(bp_pos_i+left_loop_size,i1), BasePenalty(bp_pos_j-right_loop_size,i3), mismatch_energies_interior[64*bp_before_j+16*i3+4*bp_before_i+i1]);
                         if (energy_help < min)
@@ -1020,8 +1020,8 @@ function Traceback(){
                   int_seq[BP_Order[bp_pos-1][1]+1] = min3;
 
                   min = MAX_DOUBLE;
-                  for (int i2=0; i2<4; i2++)
-                     for ( int i4=0; i4<4; i4++)
+                  for (var i2=0; i2<4; i2++)
+                     for ( var i4=0; i4<4; i4++)
                      {
                         energy_help = Sum_MaxDouble3(BasePenalty(bp_pos_i+1,i2), BasePenalty(bp_pos_j-1,i4), mismatch_energies_interior[64*bp_assign_i+16*i2+4*bp_assign_j+i4]);
                         if (energy_help < min)
@@ -1035,9 +1035,9 @@ function Traceback(){
                   int_seq[bp_pos_j-1] = min4;
 
                   //remaining bases are assigned randomly
-                  for (int i=2; i<=left_loop_size-1; i++)
+                  for (var i=2; i<=left_loop_size-1; i++)
                      int_seq[bp_pos_i+i] = SetFreeBase(bp_pos_i+i);
-                  for (int i=2; i<=right_loop_size-1; i++)
+                  for (var i=2; i<=right_loop_size-1; i++)
                      int_seq[bp_pos_j-i] = SetFreeBase(bp_pos_j-i);
                }
             }
