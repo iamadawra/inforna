@@ -54,17 +54,17 @@ var p_accept;           //probability to accept worse neighbors during SLS
 
 
 
-int main(int argc, char *argv[])
+function main(argc, argv)
 {
-   char *rstart, *str2;
-   int hd, mfe = 1, pf = 0, repeat = 0, found;
-   double energy = 0.0, kT;
-   bool constraints_given = false; //mismatches in constraints are just useful if constraints are given at all. thus here the reminder
+   var rstart, str2;
+   var hd, mfe = 1, pf = 0, repeat = 0, found;
+   var energy = 0.0, kT;
+   var constraints_given = false; //mismatches in constraints are just useful if constraints are given at all. thus here the reminder
                                    //whether constraints are given
-   char* mis_vec_char = NULL;
+   var mis_vec_char = null;
    
    //random generator init
-   long sec;
+   var sec;
    time(&sec);
    srand((unsigned)sec);
 
